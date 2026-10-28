@@ -10,6 +10,7 @@ const extOf = (name: string) => {
   const dot = name.lastIndexOf('.');
   return dot > 0 ? name.slice(dot) : '';
 };
+const relOf = (dir: string, file: string) => (dir ? `${dir}/${file}` : file);
 const pad = (n: number) => String(n).padStart(2, '0');
 
 function templateRe(dir: string): RegExp {
@@ -58,7 +59,7 @@ export async function renameNewImages(db: Db, root: string): Promise<RenameRepor
     try {
       onDisk = await fs.promises.readdir(dirPath);
     } catch (e) {
-      report.failed.push({ path: cat.rel_path, error: (e as Error).message });
+      report.failed.push({ path: cat.rel_path || '.', error: (e as Error).message });
       continue;
     }
     const taken = new Set(onDisk.map((n) => n.toLowerCase()));
@@ -76,12 +77,12 @@ export async function renameNewImages(db: Db, root: string): Promise<RenameRepor
       try {
         await fs.promises.rename(path.join(dirPath, item.from), path.join(dirPath, target));
       } catch (e) {
-        report.failed.push({ path: `${cat.rel_path}/${item.from}`, error: (e as Error).message });
+        report.failed.push({ path: relOf(cat.rel_path, item.from), error: (e as Error).message });
         continue;
       }
       taken.add(target.toLowerCase());
       max = Math.max(max, Number(re2.exec(target)?.[1] ?? 0));
-      update.run(target, `${cat.rel_path}/${target}`, byName.get(item.from)!);
+      update.run(target, relOf(cat.rel_path, target), byName.get(item.from)!);
       report.renamed++;
     }
   }

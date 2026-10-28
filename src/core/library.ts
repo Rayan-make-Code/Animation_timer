@@ -27,7 +27,7 @@ async function walk(root: string, categoryRel: string, cats: Set<string>, images
       const rel = join(categoryRel, e.name);
       cats.add(rel);
       await walk(root, rel, cats, images);
-    } else if (e.isFile() && categoryRel && isSupportedImage(e.name)) {
+    } else if (e.isFile() && isSupportedImage(e.name)) {
       const st = await fs.promises.stat(path.join(dir, e.name));
       images.push({ relPath: join(categoryRel, e.name), fileName: e.name, categoryRel, size: st.size, mtime: Math.floor(st.mtimeMs) });
     }
@@ -38,6 +38,8 @@ export async function syncLibrary(db: Db, root: string): Promise<SyncResult> {
   const cats = new Set<string>();
   const found: FoundImage[] = [];
   await walk(root, '', cats, found);
+  // Картинки прямо в выбранной папке попадают в категорию с именем этой папки (rel_path '').
+  if (found.some((f) => f.categoryRel === '')) cats.add('');
 
   const res: SyncResult = { addedImages: 0, addedCategories: 0, missing: 0, restored: 0 };
   db.exec('begin');
@@ -50,7 +52,8 @@ export async function syncLibrary(db: Db, root: string): Promise<SyncResult> {
       if (catId.has(rel)) continue;
       const slash = rel.lastIndexOf('/');
       const parent = slash < 0 ? null : catId.get(rel.slice(0, slash)) ?? null;
-      const r = insertCat.run(parent, rel.slice(slash + 1), rel);
+      const name = rel === '' ? path.basename(path.resolve(root)) || 'Корень' : rel.slice(slash + 1);
+      const r = insertCat.run(parent, name, rel);
       catId.set(rel, Number(r.lastInsertRowid));
       res.addedCategories++;
     }

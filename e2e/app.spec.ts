@@ -39,3 +39,14 @@ test('the app refuses to start when the data folder is not writable', async () =
   const code = await new Promise<number | null>((resolve) => app.process().on('exit', resolve));
   expect(code).toBe(1);
 });
+
+test('an image lying directly in the chosen folder is indexed and renamed after that folder', async () => {
+  const root = path.join((await import('./helpers')).tempRoot(), 'image');
+  fs.mkdirSync(root, { recursive: true });
+  fs.writeFileSync(path.join(root, 'madara_1.png'), (await import('./helpers')).png(20, 20, 200));
+  const { app, win } = await launch(undefined, root);
+  await win.getByRole('button', { name: 'Выбрать папку' }).click();
+  await expect(win.getByRole('tree').getByText('image')).toBeVisible();
+  expect(fs.readdirSync(root)).toEqual(['image_img_01.png']);
+  await app.close();
+});

@@ -25,13 +25,18 @@ const names = (table: string) => (db.prepare(`select name from ${table} order by
 describe('syncLibrary', () => {
   test('builds the category tree and indexes supported images only', async () => {
     const res = await syncLibrary(db, root);
-    expect(res).toMatchObject({ addedImages: 2, addedCategories: 3, missing: 0, restored: 0 });
-    expect(names('categories')).toEqual(['Лица', 'Мужские', 'Позы']);
+    expect(res).toMatchObject({ addedImages: 3, addedCategories: 4, missing: 0, restored: 0 });
+    expect(names('categories')).toEqual([path.basename(root), 'Лица', 'Мужские', 'Позы']);
     const tree = listTree(db);
-    expect(tree.map((n) => n.name)).toEqual(['Лица', 'Позы']);
-    expect(tree[0].children.map((n) => n.name)).toEqual(['Мужские']);
-    expect(tree[0].imageCount).toBe(1);
-    expect(tree[1].imageCount).toBe(1);
+    expect(tree.map((n) => n.name)).toEqual([path.basename(root), 'Лица', 'Позы']);
+    expect(tree[1].children.map((n) => n.name)).toEqual(['Мужские']);
+    expect(tree.map((n) => n.imageCount)).toEqual([1, 1, 1]);
+  });
+
+  test('images lying directly in the library folder go to a category named after it', async () => {
+    await syncLibrary(db, root);
+    expect(db.prepare("select rel_path, file_name from images where file_name = 'loose.png'").get()).toEqual({ rel_path: 'loose.png', file_name: 'loose.png' });
+    expect(await syncLibrary(db, root)).toMatchObject({ addedImages: 0, addedCategories: 0 });
   });
 
   test('second sync adds nothing, a new file is picked up', async () => {
@@ -54,7 +59,7 @@ describe('syncLibrary', () => {
   test('imageCount ignores missing and disliked images', async () => {
     await syncLibrary(db, root);
     db.prepare("update images set rating = -1 where file_name = 'a.jpg'").run();
-    expect(listTree(db)[0].imageCount).toBe(0);
+    expect(listTree(db).find((n) => n.name === 'Лица')!.imageCount).toBe(0);
   });
 
   test('indexes 10000 files in under 5 seconds', async () => {
