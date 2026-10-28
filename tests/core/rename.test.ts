@@ -50,6 +50,28 @@ describe('renameNewImages', () => {
     expect(db.prepare("select rel_path from images where file_name = 'Позы_img_01.jpg'").get()).toEqual({ rel_path: 'Позы/Позы_img_01.jpg' });
   });
 
+  test('a file lying directly in the library folder is renamed after that folder', async () => {
+    const db = openDb(':memory:');
+    const root = path.join(tmpDir(), 'madara');
+    makeFiles(root, { 'madara_1.png': 'M' });
+    await syncLibrary(db, root);
+    expect(await renameNewImages(db, root)).toEqual({ renamed: 1, failed: [] });
+    expect(fs.readFileSync(path.join(root, 'madara_img_01.png'), 'utf8')).toBe('M');
+    expect(db.prepare('select rel_path from images').get()).toEqual({ rel_path: 'madara_img_01.png' });
+  });
+
+  test('a failure names the file that could not be renamed', async () => {
+    const { db, root } = await setup();
+    const real = fs.promises.rename;
+    const spy = vi.spyOn(fs.promises, 'rename').mockImplementation(async (from, to) => {
+      if (String(from).endsWith('x.jpg')) throw new Error('EBUSY');
+      return real(from, to);
+    });
+    const report = await renameNewImages(db, root);
+    spy.mockRestore();
+    expect(report.failed[0].path).toBe('Позы/x.jpg');
+  });
+
   test('second run changes nothing', async () => {
     const { db, root } = await setup();
     await renameNewImages(db, root);
