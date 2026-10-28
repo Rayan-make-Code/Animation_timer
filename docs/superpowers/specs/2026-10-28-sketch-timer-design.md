@@ -4,10 +4,11 @@
 
 ## 1. Стек и структура
 
-- **Electron + TypeScript**, интерфейс на React + Vite (renderer), главный процесс на Node.
-- **SQLite через встроенный `node:sqlite`** (без нативных модулей: нет проблем с ABI Electron/Node, одна и та же база в тестах и в приложении). Требует Electron с Node ≥ 22.13.
-- Тесты: **Vitest** для всей логики (ядро не зависит от Electron), Playwright (Electron) для одного дымового теста интерфейса.
-- Сборка: **electron-builder, target `portable`**; .exe собирается в GitHub Actions (windows-latest). Локально в Linux проверяются тесты, типы и сборка renderer.
+- **Electron + TypeScript**, интерфейс на **React 18 + Vite 5** (renderer), главный процесс на Node. Набор инструментов и версии берутся из проекта-референса `Animation_todo_list`: Electron ^44, React ^18.3, Vite ^5.4, TypeScript ^5.6, Vitest ^2.1, Playwright ^1.56, esbuild (сборка main/preload в CJS), без UI-фреймворков и без CSS-библиотек: один `styles.css` на CSS-переменных.
+- **SQLite через встроенный `node:sqlite`** (без нативных модулей: нет проблем с ABI Electron/Node, одна и та же база в тестах и в приложении). Требует Node ≥ 22.13 (в Electron 44 есть).
+- Тесты: **Vitest** для всей логики (ядро не зависит от Electron), **Playwright** (Electron) для e2e, как в референсе.
+- Сборка: как в референсе, **`@electron/packager` + `@electron/fuses`** (`scripts/package-win.mjs`) → портативный ZIP `Sketch-Timer-<версия>-win32-x64.zip` (распаковал и запустил, установка не нужна). Собирается в GitHub Actions (`windows-latest`: typecheck, vitest, e2e, упаковка, проверка собранного exe). Локально в Linux проверяются тесты, типы и сборка renderer.
+- **Визуальный стиль** — палитра и шрифты `Animation_todo_list` (`src/renderer/styles.css`): `--bg #141519`, `--panel #1a1b20`, `--panel-2 #1f2026`, `--raise #26272e`, `--line #2a2b32`, `--text #e9eaef`, `--text-2 #a3a5b0`, `--accent #aab6ff`, `--done #7fd39b`, `--fix/--danger #ff8f8f`, `--work #7cc4ff`, `--review #f1c46b`; шрифт "Segoe UI Variable Text", "Segoe UI", Inter; собственная шапка окна с кнопками и боковая навигация как в референсе. Лайк окрашивается `--done`, дизлайк `--fix`, рабочий интервал `--work`, отдых `--review`.
 
 Разделение на модули (каждый тестируется отдельно, без Electron):
 
