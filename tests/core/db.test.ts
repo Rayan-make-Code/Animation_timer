@@ -22,6 +22,7 @@ describe('openDb', () => {
     first.close();
     const second = openDb(file);
     expect(second.prepare("select value from settings where key = 'library'").get()).toEqual({ value: 'C:/img' });
+    second.close(); // Windows не даёт удалить временную папку, пока файл БД открыт
   });
 
   test('refuses a database from a newer version', () => {
