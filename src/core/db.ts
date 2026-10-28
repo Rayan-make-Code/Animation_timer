@@ -80,3 +80,20 @@ export function openDb(file: string): Db {
   }
   return db;
 }
+
+let savepointId = 0;
+
+/** Транзакция через SAVEPOINT: безопасно вкладывается (например, savePreset внутри importBackup). */
+export function transaction<T>(db: Db, fn: () => T): T {
+  const name = `sp${++savepointId}`;
+  db.exec(`savepoint ${name}`);
+  try {
+    const result = fn();
+    db.exec(`release ${name}`);
+    return result;
+  } catch (e) {
+    db.exec(`rollback to ${name}`);
+    db.exec(`release ${name}`);
+    throw e;
+  }
+}

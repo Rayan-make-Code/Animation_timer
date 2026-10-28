@@ -1,4 +1,4 @@
-import type { Db } from './db';
+import { transaction, type Db } from './db';
 
 export interface Group { repeats: number; workLabel: string; workSec: number; restSec: number }
 export interface NewPreset { name: string; description: string; groups: Group[] }
@@ -20,8 +20,7 @@ export function validatePreset(p: NewPreset): string[] {
 export function savePreset(db: Db, p: NewPreset & { id?: number }): number {
   const errors = validatePreset(p);
   if (errors.length) throw new Error(errors.join(' '));
-  db.exec('begin');
-  try {
+  return transaction(db, () => {
     let id = p.id;
     if (id === undefined) {
       id = Number(db.prepare('insert into presets(name, description) values (?, ?)').run(p.name.trim(), p.description).lastInsertRowid);
@@ -31,12 +30,8 @@ export function savePreset(db: Db, p: NewPreset & { id?: number }): number {
     }
     const ins = db.prepare('insert into preset_groups(preset_id, position, repeats, work_label, work_sec, rest_sec) values (?, ?, ?, ?, ?, ?)');
     p.groups.forEach((g, i) => ins.run(id!, i, g.repeats, g.workLabel, g.workSec, g.restSec));
-    db.exec('commit');
     return id;
-  } catch (e) {
-    db.exec('rollback');
-    throw e;
-  }
+  });
 }
 
 export function listPresets(db: Db): Preset[] {
