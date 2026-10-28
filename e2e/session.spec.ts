@@ -78,7 +78,7 @@ test('Escape asks for confirmation before ending the session', async () => {
   await app.close();
 });
 
-test('an empty selection cannot start; a library of only disliked images shows a message', async () => {
+test('an empty selection cannot start the session', async () => {
   const { app, win } = await launch(undefined, makeLibrary());
   await win.getByRole('button', { name: 'Выбрать папку' }).click();
   await expect(win.getByRole('tree').getByText('Мужские')).toBeVisible();
