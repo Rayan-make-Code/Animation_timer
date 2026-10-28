@@ -126,7 +126,9 @@ app.whenReady().then(() => {
     assertWritable(dataDir);
     db = openDb(path.join(dataDir, 'sketch-timer.db'));
   } catch (e) {
-    dialog.showErrorBox(APP_NAME, (e as Error).message);
+    // В тестах модальное окно нельзя закрыть, поэтому там ошибка идёт в stderr.
+    if (devEnv.SKETCH_NO_ERROR_DIALOG) console.error((e as Error).message);
+    else dialog.showErrorBox(APP_NAME, (e as Error).message);
     app.exit(1);
     return;
   }

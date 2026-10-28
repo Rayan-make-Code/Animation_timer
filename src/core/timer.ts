@@ -10,14 +10,14 @@ export interface Step {
 }
 
 /**
- * Пресет → линейный список шагов. Первая группа с одним повтором и без отдыха — «приготовьтесь»:
+ * Пресет → линейный список шагов. Первая группа с одним повтором и без отдыха (если есть и другие группы) — «приготовьтесь»:
  * показывает первое изображение, но не засчитывается и не входит в прогресс.
  */
 export function expandPreset(p: NewPreset): Step[] {
   const steps: Step[] = [];
   let work = 0;
   p.groups.forEach((g, gi) => {
-    if (gi === 0 && g.repeats === 1 && g.restSec === 0) {
+    if (gi === 0 && p.groups.length > 1 && g.repeats === 1 && g.restSec === 0) {
       steps.push({ kind: 'prepare', label: g.workLabel, sec: g.workSec, workIndex: 0 });
       return;
     }

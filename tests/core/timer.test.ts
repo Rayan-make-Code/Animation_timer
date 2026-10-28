@@ -48,6 +48,11 @@ describe('expandPreset', () => {
     expect(steps.map((s) => `${s.kind}${s.workIndex}`)).toEqual(['work0', 'rest0', 'work1', 'rest1', 'work2', 'rest2']);
   });
 
+  test('a single one-shot group is a real work step, not a preparation', () => {
+    const steps = expandPreset({ name: 'p', description: '', groups: [{ repeats: 1, workLabel: 'W', workSec: 60, restSec: 0 }] });
+    expect(steps.map((s) => s.kind)).toEqual(['work']);
+  });
+
   test('zero rest creates no rest steps, and not-first group is not a preparation', () => {
     const steps = expandPreset({ name: 'p', description: '', groups: [{ repeats: 2, workLabel: 'W', workSec: 1, restSec: 0 }] });
     expect(steps.map((s) => s.kind)).toEqual(['work', 'work']);
