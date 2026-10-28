@@ -1,5 +1,5 @@
 import type { QueueItem } from './picker';
-import type { NewPreset } from './presets';
+import type { NewPreset } from './presetModel';
 
 export interface Step {
   kind: 'prepare' | 'work' | 'rest';
@@ -32,21 +32,21 @@ export function expandPreset(p: NewPreset): Step[] {
 
 export const totalWork = (steps: Step[]): number => steps.filter((s) => s.kind === 'work').length;
 
-export interface SessionHooks {
+export interface SessionHooks<H = number> {
   /** Вызывается один раз по окончании рабочего интервала; возвращает id записи для отката. */
-  onViewed(item: QueueItem): number;
-  onUnviewed(viewId: number): void;
+  onViewed(item: QueueItem): H;
+  onUnviewed(handle: H): void;
 }
 
 export type SessionState = 'running' | 'paused' | 'finished';
 
-export class SessionMachine {
+export class SessionMachine<H = number> {
   state: SessionState = 'running';
   stepIndex = 0;
   remainingMs: number;
-  private views = new Map<number, number>();
+  private views = new Map<number, H>();
 
-  constructor(readonly steps: Step[], readonly queue: QueueItem[], private hooks: SessionHooks) {
+  constructor(readonly steps: Step[], readonly queue: QueueItem[], private hooks: SessionHooks<H>) {
     this.remainingMs = steps[0].sec * 1000;
   }
 
@@ -101,9 +101,9 @@ export class SessionMachine {
     const cur = this.step;
     const targetWork = cur.kind === 'rest' ? cur.workIndex : cur.kind === 'work' ? cur.workIndex - 1 : -1;
     if (targetWork < 0) return;
-    const viewId = this.views.get(targetWork);
-    if (viewId !== undefined) {
-      this.hooks.onUnviewed(viewId);
+    const handle = this.views.get(targetWork);
+    if (this.views.has(targetWork)) {
+      this.hooks.onUnviewed(handle as H);
       this.views.delete(targetWork);
     }
     this.goTo(this.steps.findIndex((s) => s.kind === 'work' && s.workIndex === targetWork));
