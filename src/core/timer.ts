@@ -62,17 +62,20 @@ export class SessionMachine<H = number> {
     return { done: this.views.size, total: totalWork(this.steps) };
   }
 
-  /** Время течёт только в состоянии running; elapsedMs можно передавать большими порциями. */
-  tick(elapsedMs: number): void {
+  /** Время течёт только в состоянии running; elapsedMs можно передавать большими порциями. Возвращает число шагов, закончившихся по времени. */
+  tick(elapsedMs: number): number {
     let left = elapsedMs;
+    let completed = 0;
     while (left > 0 && this.state === 'running') {
       if (left < this.remainingMs) {
         this.remainingMs -= left;
-        return;
+        break;
       }
       left -= this.remainingMs;
       this.completeStep();
+      completed++;
     }
+    return completed;
   }
 
   pause(): void {

@@ -152,3 +152,27 @@ describe('SessionMachine', () => {
     expect(machine.state).toBe('finished');
   });
 });
+
+describe('tick return value', () => {
+  test('tick returns how many steps ended', () => {
+    const { machine } = setup(
+      [
+        { repeats: 1, workLabel: 'P', workSec: 5, restSec: 0 },
+        { repeats: 1, workLabel: 'W', workSec: 60, restSec: 0 },
+      ],
+      1,
+    );
+    expect(machine.tick(4000)).toBe(0);
+    expect(machine.tick(2000)).toBe(1);
+    expect(machine.tick(200000)).toBe(1);
+    expect(machine.state).toBe('finished');
+  });
+
+  test('next() and prev() do not affect the count of subsequent ticks', () => {
+    const { machine } = setup(simple, 3);
+    machine.next();
+    expect(machine.tick(10000)).toBe(1);
+    machine.prev();
+    expect(machine.tick(10000)).toBe(1);
+  });
+});
