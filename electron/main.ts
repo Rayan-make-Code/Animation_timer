@@ -9,6 +9,7 @@ import { buildQueue } from '../src/core/picker';
 import { copyPreset, deletePreset, listPresets, savePreset } from '../src/core/presets';
 import { IMAGE_COLUMNS, listByRating, recordView, setRating, toggleRating, toImageRow, undoView } from '../src/core/ratings';
 import { renameNewImages } from '../src/core/rename';
+import { getSetting, setSetting } from '../src/core/settings';
 import { assertWritable, resolveDataDir } from './paths';
 
 const APP_NAME = 'Sketch Timer';
@@ -25,8 +26,7 @@ let win: BrowserWindow | null = null;
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'sketch-image', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 
-const libraryRoot = (): string | null =>
-  (db.prepare("select value from settings where key = 'library'").get() as { value: string } | undefined)?.value ?? null;
+const libraryRoot = (): string | null => getSetting(db, 'library');
 
 function requireRoot(): string {
   const root = libraryRoot();
@@ -67,7 +67,7 @@ function registerIpc() {
     const pick = await dialog.showOpenDialog(win!, { title: 'Папка с изображениями', properties: ['openDirectory'] });
     if (pick.canceled || !pick.filePaths[0]) return null;
     const root = pick.filePaths[0];
-    db.prepare("insert into settings(key, value) values ('library', ?) on conflict(key) do update set value = excluded.value").run(root);
+    setSetting(db, 'library', root);
     return syncAndRename(root);
   });
   handle('library:sync', () => syncAndRename(requireRoot()));
