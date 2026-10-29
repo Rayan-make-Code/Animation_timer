@@ -7,6 +7,8 @@ import type { RenameReport } from '../core/rename';
 
 export type { CategoryNode, ImageRow, ImportReport, NewPreset, Preset, QueueItem, Rating, RenameReport, SyncResult };
 
+export interface Settings { selectedPreset: number | null; selectedCategories: number[]; firstRunDone: boolean }
+
 export interface AppState { library: string | null; dataDir: string; version: string }
 
 /** Мост main ↔ renderer. Ошибки приходят как отклонённые промисы с русским текстом. */
@@ -31,6 +33,12 @@ export interface SketchApi {
   /** Диалог сохранения. Возвращает путь файла или null при отмене. */
   exportBackup(includeViews: boolean): Promise<string | null>;
   importBackup(): Promise<ImportReport | null>;
+  /** Сколько картинок осталось в текущем круге и сколько всего. */
+  cycleStatus(categoryIds: number[]): Promise<{ remaining: number; total: number }>;
+  /** Переносит файл изображения в корзину и убирает его из библиотеки. */
+  trashImage(imageId: number): Promise<void>;
+  getSettings(): Promise<Settings>;
+  saveSettings(p: Partial<Settings>): Promise<void>;
   setFullscreen(on: boolean): Promise<void>;
   minimize(): void;
   close(): void;
