@@ -38,15 +38,15 @@ function descendants(db: Db, ids: number[]): number[] {
 }
 
 /**
- * Очередь сессии: сначала изображения, не просмотренные в текущем цикле своей папки;
- * если очередь длиннее пула, начинается следующий круг (цикл + 1) без повторов внутри круга.
+ * Общее правило цикла для buildQueue и cycleStatus: допустимые изображения (не пропавшие, не дизлайкнутые,
+ * с подкатегориями), цикл каждой папки и ещё не просмотренные в нём; полностью просмотренная папка начинает новый цикл.
  */
-export function buildQueue(db: Db, categoryIds: number[], count: number, rng: () => number = Math.random): QueueItem[] {
+function firstRound(db: Db, categoryIds: number[]): { eligible: ImageRow[]; base: Map<number, number>; round: QueueItem[] } {
+  if (categoryIds.length === 0) return { eligible: [], base: new Map(), round: [] };
   const cats = descendants(db, categoryIds);
   const ph = cats.map(() => '?').join(',');
   const eligible = (db.prepare(`select ${IMAGE_COLUMNS} from images where category_id in (${ph}) and missing = 0 and rating != -1`).all(...cats))
     .map(toImageRow);
-  if (eligible.length === 0) throw new EmptyPoolError();
 
   const maxCycle = new Map<number, number>();
   for (const r of db.prepare(`select i.category_id as c, max(v.cycle) as m from views v join images i on i.id = v.image_id where i.category_id in (${ph}) group by i.category_id`).all(...cats) as { c: number; m: number }[]) {
@@ -61,7 +61,7 @@ export function buildQueue(db: Db, categoryIds: number[], count: number, rng: ()
   for (const img of eligible) byCat.set(img.categoryId, [...(byCat.get(img.categoryId) ?? []), img]);
 
   const base = new Map<number, number>();
-  const firstRound: QueueItem[] = [];
+  const round: QueueItem[] = [];
   for (const [catId, imgs] of byCat) {
     let cycle = maxCycle.get(catId) ?? 1;
     let pending = imgs.filter((i) => !viewedInCycle.has(i.id));
@@ -70,10 +70,26 @@ export function buildQueue(db: Db, categoryIds: number[], count: number, rng: ()
       pending = imgs;
     }
     base.set(catId, cycle);
-    for (const image of pending) firstRound.push({ image, categoryId: catId, cycle });
+    for (const image of pending) round.push({ image, categoryId: catId, cycle });
   }
+  return { eligible, base, round };
+}
 
-  const queue = weightedOrder(firstRound, (q) => weightOf(q.image), rng);
+/** Состояние цикла выбранных категорий: сколько изображений ещё не показано в текущем цикле и сколько всего. */
+export function cycleStatus(db: Db, categoryIds: number[]): { remaining: number; total: number } {
+  const { eligible, round } = firstRound(db, categoryIds);
+  return { remaining: round.length, total: eligible.length };
+}
+
+/**
+ * Очередь сессии: сначала изображения, не просмотренные в текущем цикле своей папки;
+ * если очередь длиннее пула, начинается следующий круг (цикл + 1) без повторов внутри круга.
+ */
+export function buildQueue(db: Db, categoryIds: number[], count: number, rng: () => number = Math.random): QueueItem[] {
+  const { eligible, base, round: firstRoundItems } = firstRound(db, categoryIds);
+  if (eligible.length === 0) throw new EmptyPoolError();
+
+  const queue = weightedOrder(firstRoundItems, (q) => weightOf(q.image), rng);
   for (let round = 1; queue.length < count; round++) {
     const next = eligible.map((image) => ({ image, categoryId: image.categoryId, cycle: base.get(image.categoryId)! + round }));
     queue.push(...weightedOrder(next, (q) => weightOf(q.image), rng));
