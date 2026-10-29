@@ -68,3 +68,24 @@ test('an image lying directly in the chosen folder is indexed and renamed after 
   expect(fs.readdirSync(root)).toEqual(['image_img_01.png']);
   await app.close();
 });
+
+test('a selected category whose images are all gone is dropped from the selection', async () => {
+  const lib = makeLibrary();
+  const first = await launch(undefined, lib);
+  await first.win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
+  await first.win.getByRole('group', { name: 'Категории' }).getByRole('button', { name: 'Позы', exact: true }).click();
+  await expect(first.win.getByText('цикл: осталось 3 из 3')).toBeVisible();
+  await first.app.close();
+
+  // Все изображения «Позы» пропали с диска.
+  query(first.dataDir, "update images set missing = 1 where rel_path like 'Позы/%'");
+  const { app, win, dataDir } = await launch(first.dataDir);
+  const tags = win.getByRole('group', { name: 'Категории' });
+  await expect(tags.getByRole('button', { name: 'Лица', exact: true })).toBeVisible();
+  await expect(tags.getByRole('button', { name: 'Позы', exact: true })).toHaveCount(0);
+  const start = win.getByRole('button', { name: 'Старт', exact: true });
+  await expect(start).toBeDisabled();
+  await expect(start).toHaveAttribute('data-tip', 'Выберите хотя бы одну категорию');
+  await expect.poll(() => query<{ value: string }>(dataDir, "select value from settings where key = 'selectedCategories'")[0]?.value).toBe('[]');
+  await app.close();
+});

@@ -24,7 +24,8 @@ export function StartBar({ preset, onEdit, onDelete }: { preset: Preset | null; 
   const count = totalWork(steps);
   const blocked = !library ? 'Сначала выберите папку библиотеки'
     : selected.length === 0 ? 'Выберите хотя бы одну категорию'
-      : !preset ? 'Сначала создайте пресет' : null;
+      : cycle?.total === 0 ? 'В выбранных категориях нет изображений'
+        : !preset ? 'Сначала создайте пресет' : null;
 
   const start = async () => {
     if (blocked || !preset) return;

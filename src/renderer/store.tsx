@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { CategoryNode, Preset, QueueItem } from '../shared/api';
 
 export interface ActiveSession { preset: Preset; queue: QueueItem[] }
@@ -30,12 +30,21 @@ interface Store {
 
 const Ctx = createContext<Store | null>(null);
 
-/** Все id категорий дерева. */
-const treeIds = (nodes: CategoryNode[]): Set<number> => {
+/** id категорий, у которых есть теги: папки без изображений скрыты и выбранными быть не могут. */
+const visibleIds = (nodes: CategoryNode[]): Set<number> => {
   const ids = new Set<number>();
-  const walk = (ns: CategoryNode[]) => ns.forEach((n) => { ids.add(n.id); walk(n.children); });
+  const walk = (ns: CategoryNode[]) => ns.forEach((n) => { if (n.imageCount > 0) ids.add(n.id); walk(n.children); });
   walk(nodes);
   return ids;
+};
+
+/** Убирает из выбора скрытые и удалённые категории; изменившийся список сохраняется. */
+const cleanSelection = (sel: number[], nodes: CategoryNode[]): number[] => {
+  const ids = visibleIds(nodes);
+  if (sel.every((id) => ids.has(id))) return sel;
+  const next = sel.filter((id) => ids.has(id));
+  void window.sketch.saveSettings({ selectedCategories: next });
+  return next;
 };
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -44,6 +53,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [library, setLibrary] = useState<string | null>(null);
   const [tree, setTree] = useState<CategoryNode[]>([]);
   const [selected, setSelected] = useState<number[]>([]);
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
   const [session, setSession] = useState<ActiveSession | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [firstRun, setFirstRun] = useState(false);
@@ -59,9 +70,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const [state, nodes] = await Promise.all([window.sketch.getState(), window.sketch.getTree()]);
     setLibrary(state.library);
     setTree(nodes);
-    // Устаревшие id (удалённые папки) отбрасываем.
-    const ids = treeIds(nodes);
-    setSelected((s) => (s.every((id) => ids.has(id)) ? s : s.filter((id) => ids.has(id))));
+    setSelected(cleanSelection(selectedRef.current, nodes));
   }, []);
 
   useEffect(() => {
@@ -69,11 +78,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const [settings, list, state, nodes] = await Promise.all([
         window.sketch.getSettings(), window.sketch.listPresets(), window.sketch.getState(), window.sketch.getTree(),
       ]);
-      const ids = treeIds(nodes);
       setFirstRun(!settings.firstRunDone);
       setLibrary(state.library);
       setTree(nodes);
-      setSelected(settings.selectedCategories.filter((id) => ids.has(id)));
+      setSelected(cleanSelection(settings.selectedCategories, nodes));
       setPresets(list);
       setSelectedPresetId(list.some((p) => p.id === settings.selectedPreset) ? settings.selectedPreset : list[0]?.id ?? null);
     })();
