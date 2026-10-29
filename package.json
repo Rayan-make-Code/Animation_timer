@@ -1,8 +1,8 @@
 {
-  "name": "sketch-timer",
-  "productName": "Sketch Timer",
-  "version": "0.1.0",
-  "description": "Sketch Timer — таймер набросков для аниматора",
+  "name": "miyp-timer",
+  "productName": "MIYP Timer",
+  "version": "0.2.0",
+  "description": "MIYP Timer — таймер набросков для аниматора",
   "private": true,
   "main": "dist/electron/main.js",
   "scripts": {
