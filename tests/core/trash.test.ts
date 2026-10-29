@@ -45,14 +45,25 @@ describe('trashImage', () => {
     const id = idOf('A/1.png');
     db.prepare("update images set rel_path = '../x.png' where id = ?").run(id);
     const trash = vi.fn(async () => {});
-    await expect(trashImage(db, root, id, trash)).rejects.toThrow();
+    await expect(trashImage(db, root, id, trash)).rejects.toThrow('Путь вне папки библиотеки');
+    expect(trash).not.toHaveBeenCalled();
+    expect(missingOf(id)).toBe(0);
+  });
+
+  test('refuses the root itself and sibling folders sharing the root prefix', async () => {
+    const id = idOf('A/1.png');
+    const trash = vi.fn(async () => {});
+    for (const rel of ['', `../${path.basename(root)}-evil/x.png`]) {
+      db.prepare('update images set rel_path = ? where id = ?').run(rel, id);
+      await expect(trashImage(db, root, id, trash)).rejects.toThrow('Путь вне папки библиотеки');
+    }
     expect(trash).not.toHaveBeenCalled();
     expect(missingOf(id)).toBe(0);
   });
 
   test('unknown image id rejects', async () => {
     const trash = vi.fn(async () => {});
-    await expect(trashImage(db, root, 9999, trash)).rejects.toThrow();
+    await expect(trashImage(db, root, 9999, trash)).rejects.toThrow('Изображение 9999 не найдено');
     expect(trash).not.toHaveBeenCalled();
   });
 });

@@ -10,7 +10,8 @@ export async function trashImage(db: Db, root: string, imageId: number, trash: T
   if (!row) throw new Error(`Изображение ${imageId} не найдено`);
   const base = path.resolve(root);
   const abs = path.resolve(base, ...row.relPath.split('/'));
-  if (!abs.startsWith(base + path.sep)) throw new Error('Путь вне папки библиотеки');
+  const rel = path.relative(base, abs);
+  if (!rel || rel === '..' || rel.startsWith('..' + path.sep) || path.isAbsolute(rel)) throw new Error('Путь вне папки библиотеки');
   try {
     await trash(abs);
   } catch (e) {
