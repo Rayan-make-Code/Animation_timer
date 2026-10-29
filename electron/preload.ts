@@ -9,7 +9,6 @@ const api: SketchApi = {
   syncLibrary: () => call('library:sync'),
   renameNew: () => call('library:rename'),
   getTree: () => call('library:tree'),
-  listRated: (r) => call('rated:list', r),
   toggleRating: (id, t) => call('rating:toggle', id, t),
   setRating: (id, r) => call('rating:set', id, r),
   listPresets: () => call('presets:list'),

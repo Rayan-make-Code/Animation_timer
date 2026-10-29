@@ -7,7 +7,7 @@ import { openDb, type Db } from '../src/core/db';
 import { listTree, syncLibrary } from '../src/core/library';
 import { buildQueue, cycleStatus } from '../src/core/picker';
 import { copyPreset, deletePreset, listPresets, savePreset } from '../src/core/presets';
-import { IMAGE_COLUMNS, listByRating, recordView, setRating, toggleRating, toImageRow, undoView } from '../src/core/ratings';
+import { IMAGE_COLUMNS, recordView, setRating, toggleRating, toImageRow, undoView } from '../src/core/ratings';
 import { renameNewImages } from '../src/core/rename';
 import { seedDefaultPresets } from '../src/core/defaults';
 import { getSetting, parseIds, setSetting } from '../src/core/settings';
@@ -106,7 +106,6 @@ function registerIpc() {
   handle('library:sync', () => syncAndRename(requireRoot()));
   handle('library:rename', () => renameNewImages(db, requireRoot()));
   handle('library:tree', () => listTree(db));
-  handle('rated:list', (r: 1 | -1) => listByRating(db, r));
   handle('rating:toggle', (id: number, t: 1 | -1) => toggleRating(db, id, t));
   handle('rating:set', (id: number, r: -1 | 0 | 1) => setRating(db, id, r));
   handle('presets:list', () => listPresets(db));

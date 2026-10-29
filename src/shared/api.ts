@@ -20,7 +20,6 @@ export interface SketchApi {
   syncLibrary(): Promise<{ sync: SyncResult; rename: RenameReport }>;
   renameNew(): Promise<RenameReport>;
   getTree(): Promise<CategoryNode[]>;
-  listRated(rating: 1 | -1): Promise<ImageRow[]>;
   toggleRating(imageId: number, target: 1 | -1): Promise<Rating>;
   setRating(imageId: number, rating: Rating): Promise<void>;
   listPresets(): Promise<Preset[]>;
