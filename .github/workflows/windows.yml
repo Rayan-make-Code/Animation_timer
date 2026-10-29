@@ -31,7 +31,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
-          name: Sketch-Timer-win32-x64
+          name: MIYP-Timer-win32-x64
           path: release/*.zip
           retention-days: 3
       - name: Релиз
@@ -39,4 +39,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: release/*.zip
-          name: Sketch Timer ${{ github.ref_name }}
+          name: MIYP Timer ${{ github.ref_name }}

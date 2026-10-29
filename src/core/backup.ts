@@ -28,9 +28,9 @@ export function exportBackup(db: Db, opts: { includeViews: boolean }): BackupFil
 }
 
 function parse(data: unknown): BackupFile {
-  if (typeof data !== 'object' || data === null) throw new BackupError('Файл не похож на резервную копию Sketch Timer.');
+  if (typeof data !== 'object' || data === null) throw new BackupError('Файл не похож на резервную копию MIYP Timer.');
   const d = data as Partial<BackupFile>;
-  if (d.format !== BACKUP_FORMAT) throw new BackupError('Файл не похож на резервную копию Sketch Timer.');
+  if (d.format !== BACKUP_FORMAT) throw new BackupError('Файл не похож на резервную копию MIYP Timer.');
   if (typeof d.version !== 'number' || d.version > BACKUP_VERSION) {
     throw new BackupError('Резервная копия создана более новой версией приложения и не может быть импортирована.');
   }
