@@ -1,7 +1,7 @@
 import { useStore } from './store';
 import { imageUrl, type CategoryNode } from '../shared/api';
 
-export const mmss = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+export { mmss } from '../core/dial';
 
 export function Thumb({ id, alt }: { id: number; alt: string }) {
   return <img className="thumb" src={imageUrl(id)} alt={alt} loading="lazy" />;
