@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { NewPreset, Preset } from '../../shared/api';
-import { CategoryTags } from '../main/CategoryTags';
+import { CategoryTags, flattenTags } from '../main/CategoryTags';
 import { Dial } from '../main/Dial';
 import { Footer } from '../main/Footer';
 import { blankPreset, PresetEditor, type EditorHandle } from '../main/PresetEditor';
@@ -15,7 +15,7 @@ const editOf = (p: Preset): Editing => ({ id: p.id, initial: { name: p.name, des
 
 /** Главный экран: пресеты → циферблат или редактор → описание → категории → «Старт» → подвал. */
 export function Main() {
-  const { presets, reloadPresets, selectedPresetId, selectPreset, firstRun, notice, setNotice } = useStore();
+  const { presets, reloadPresets, selectedPresetId, selectPreset, firstRun, notice, setNotice, tree } = useStore();
   const [editing, setEditing] = useState<Editing | null>(null);
   // null — панель библиотеки следует правилу первого запуска.
   const [panelOpen, setPanelOpen] = useState<boolean | null>(null);
@@ -23,7 +23,7 @@ export function Main() {
   const list = presets ?? [];
   const preset = list.find((p) => p.id === selectedPresetId) ?? null;
 
-  // Открытый редактор сохраняется сам, когда пользователь переходит к другому блоку или пресету.
+  // Открытый редактор сохраняется сам: при переходе к другому полю (см. PresetEditor), блоку или пресету.
   const editorRef = useRef<EditorHandle>(null);
   const commit = async (): Promise<boolean> => (editing ? (await editorRef.current?.commit()) ?? true : true);
   const pick = async (p: Preset) => {
@@ -35,17 +35,17 @@ export function Main() {
     if (!(await commit())) return;
     setEditing({ initial: blankPreset(), key: ++editKey });
   };
-  const save = async (draft: NewPreset): Promise<boolean> => {
+  /** Автосохранение: редактор остаётся открытым; возвращает id пресета или null при ошибке. */
+  const save = async (draft: NewPreset, id?: number): Promise<number | null> => {
     try {
-      const id = await window.sketch.savePreset({ ...draft, id: editing?.id });
+      const saved = await window.sketch.savePreset({ ...draft, id });
       await reloadPresets();
-      selectPreset(id);
-      setEditing(null);
+      selectPreset(saved);
+      return saved;
     } catch (e) {
       setNotice(errorText(e));
-      return false;
+      return null;
     }
-    return true;
   };
   const remove = async () => {
     if (!preset) return;
@@ -62,12 +62,19 @@ export function Main() {
   return (
     <>
       <main className="main" onPointerDownCapture={(e) => {
-        // Нажатие вне редактора и ряда пресетов (категории, «Старт», подвал) сохраняет черновик.
-        if (editing && !(e.target as Element).closest('.editor, .preset-row')) void commit();
+        if (!editing) return;
+        const target = e.target as Element;
+        // Общий блок категорий: сохраняем черновик и возвращаем циферблат. Нажатие на тег потом переключит его.
+        if (target.closest('.tags')) {
+          void commit().then((ok) => ok && setEditing(null));
+        } else if (!target.closest('.editor, .preset-row')) {
+          // Прочие нажатия вне редактора и ряда пресетов («Старт», подвал) только сохраняют черновик.
+          void commit();
+        }
       }}>
         <PresetRow presets={list} selectedId={selectedPresetId} onPick={(p) => void pick(p)} onNew={() => void newPreset()} />
         {editing ? (
-          <PresetEditor key={editing.key} ref={editorRef} initial={editing.initial} onCancel={() => setEditing(null)} onSave={save} />
+          <PresetEditor key={editing.key} ref={editorRef} presetId={editing.id} initial={editing.initial} tags={flattenTags(tree)} onSave={save} />
         ) : (
           preset && <Dial key={preset.id} preset={preset} />
         )}

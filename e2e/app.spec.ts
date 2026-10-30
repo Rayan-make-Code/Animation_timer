@@ -3,13 +3,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { launch, makeLibrary, png, query, tempRoot } from './helpers';
 
-test('first run shows three default presets and opens the editor on click', async () => {
+test('first run shows the 1 h default preset and opens the editor on click', async () => {
   const { app, win } = await launch();
-  await expect(win.getByRole('button', { name: /^Разминка/ })).toBeVisible();
-  await expect(win.getByRole('button', { name: /^Жесты 20/ })).toBeVisible();
-  await expect(win.getByRole('button', { name: /^Длинная/ })).toBeVisible();
-  await win.getByRole('button', { name: /^Жесты 20/ }).click();
-  await expect(win.getByRole('textbox', { name: 'Название' })).toHaveValue('Жесты 20');
+  await expect(win.getByRole('button', { name: /^1 ч/ })).toBeVisible();
+  await expect(win.getByRole('button', { name: /^Разминка/ })).toHaveCount(0);
+  await win.getByRole('button', { name: /^1 ч/ }).click();
+  await expect(win.getByRole('textbox', { name: 'Название' })).toHaveValue('1 ч');
   await app.close();
 });
 
@@ -22,6 +21,7 @@ test('during the first run the library panel is open by default', async () => {
 test('after the first session start the panel is hidden and a preset click shows the dial', async () => {
   const first = await launch(undefined, makeLibrary());
   await first.win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
+  // Категории принадлежат пресету: выбранный по умолчанию «1 ч» получает «Позы».
   await first.win.getByRole('group', { name: 'Категории' }).getByRole('button', { name: 'Позы', exact: true }).click();
   await first.win.getByRole('button', { name: 'Старт', exact: true }).click();
   await expect(first.win.getByRole('progressbar', { name: 'Прогресс сессии' })).toBeVisible();
@@ -31,27 +31,41 @@ test('after the first session start the panel is hidden and a preset click shows
   await first.app.close();
 
   const { app, win } = await launch(first.dataDir);
-  await expect(win.getByRole('button', { name: /^Жесты 20/ })).toBeVisible();
+  await expect(win.getByRole('button', { name: /^1 ч/ })).toBeVisible();
   await expect(win.getByRole('toolbar', { name: 'Библиотека' })).toHaveCount(0);
-  // Выбор пресета сразу открывает редактор; переход к категориям сохраняет и показывает циферблат.
-  await win.getByRole('button', { name: /^Жесты 20/ }).click();
-  await expect(win.getByRole('textbox', { name: 'Название' })).toHaveValue('Жесты 20');
-  await win.getByRole('group', { name: 'Категории' }).getByRole('button', { name: 'Позы', exact: true }).click();
+  // Выбор пресета сразу открывает редактор; нажатие на общий блок категорий сохраняет и показывает циферблат.
+  await win.getByRole('button', { name: /^1 ч/ }).click();
+  await expect(win.getByRole('textbox', { name: 'Название' })).toHaveValue('1 ч');
+  await win.getByRole('group', { name: 'Категории', exact: true }).getByRole('button', { name: 'Позы', exact: true }).click();
   await expect(win.getByRole('region', { name: 'Циферблат пресета' })).toBeVisible();
   await expect(win.getByRole('textbox', { name: 'Название' })).toHaveCount(0);
   await app.close();
 });
 
-test('editing autosaves when the user moves on to the categories, and preparation has no repeats', async () => {
+test('editing autosaves when the user moves to the next field, and preparation has no repeats', async () => {
   const { app, win, dataDir } = await launch(undefined, makeLibrary());
   await win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
-  await win.getByRole('button', { name: /^Жесты 20/ }).click();
+  await win.getByRole('button', { name: /^1 ч/ }).click();
   await expect(win.getByRole('textbox', { name: 'Этап 1: повторы' })).toHaveCount(0);
   await expect(win.getByRole('textbox', { name: 'Этап 1: упражнение' })).toHaveValue('Приготовьтесь');
-  await win.getByRole('textbox', { name: 'Название' }).fill('Жесты 25');
-  await win.getByRole('group', { name: 'Категории' }).getByRole('button', { name: 'Позы', exact: true }).click();
-  await expect(win.getByRole('textbox', { name: 'Название' })).toHaveCount(0);
-  expect(query<{ name: string }>(dataDir, "select name from presets where name = 'Жесты 25'")).toHaveLength(1);
+  await win.getByRole('textbox', { name: 'Название' }).fill('Час 2');
+  // Переход в следующее поле сохраняет название, кнопок «Сохранить» и «Отмена» нет.
+  await win.getByRole('textbox', { name: 'Описание' }).focus();
+  await expect.poll(() => query<{ name: string }>(dataDir, "select name from presets where name = 'Час 2'")).toHaveLength(1);
+  await expect(win.getByRole('button', { name: 'Сохранить' })).toHaveCount(0);
+  await expect(win.getByRole('button', { name: 'Отмена' })).toHaveCount(0);
+  await app.close();
+});
+
+test('a category chosen in the editor is kept by the preset, and the shared categories open the dial', async () => {
+  const lib = makeLibrary();
+  const { app, win, dataDir } = await launch(undefined, lib);
+  await win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
+  await win.getByRole('button', { name: /^1 ч/ }).click();
+  await win.getByRole('group', { name: 'Категории пресета' }).getByRole('button', { name: 'Позы', exact: true }).click();
+  await expect.poll(() => query<{ c: string }>(dataDir, "select category_ids as c from presets where name = '1 ч'")[0]?.c).not.toBe('[]');
+  await win.getByRole('group', { name: 'Категории', exact: true }).getByRole('button', { name: 'Лица', exact: true }).click();
+  await expect(win.getByRole('region', { name: 'Циферблат пресета' })).toBeVisible();
   await app.close();
 });
 
@@ -80,13 +94,12 @@ test('no library: footer says «Папка не выбрана» and Старт 
   await app.close();
 });
 
-test('creating a preset in the editor saves it', async () => {
+test('creating a preset in the editor saves it when the next field is filled', async () => {
   const { app, win, dataDir } = await launch();
   await win.getByRole('button', { name: 'Новый пресет' }).click();
   await win.getByRole('textbox', { name: 'Название' }).fill('Тест');
-  await win.getByRole('button', { name: 'Сохранить' }).click();
-  await expect(win.getByRole('button', { name: /^Тест/ })).toBeVisible();
-  expect(query<{ name: string }>(dataDir, "select name from presets where name = 'Тест'")).toHaveLength(1);
+  await win.getByRole('textbox', { name: 'Описание' }).focus();
+  await expect.poll(() => query<{ name: string }>(dataDir, "select name from presets where name = 'Тест'")).toHaveLength(1);
   await app.close();
 });
 
@@ -110,7 +123,7 @@ test('an image lying directly in the chosen folder is indexed and renamed after 
   await app.close();
 });
 
-test('a selected category whose images are all gone is dropped from the selection', async () => {
+test('a preset whose categories have no images left cannot start, with a message', async () => {
   const lib = makeLibrary();
   const first = await launch(undefined, lib);
   await first.win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
@@ -119,13 +132,12 @@ test('a selected category whose images are all gone is dropped from the selectio
 
   // Все изображения «Позы» пропали с диска.
   query(first.dataDir, "update images set missing = 1 where rel_path like 'Позы/%'");
-  const { app, win, dataDir } = await launch(first.dataDir);
-  const tags = win.getByRole('group', { name: 'Категории' });
+  const { app, win } = await launch(first.dataDir);
+  const tags = win.getByRole('group', { name: 'Категории', exact: true });
   await expect(tags.getByRole('button', { name: 'Лица', exact: true })).toBeVisible();
   await expect(tags.getByRole('button', { name: 'Позы', exact: true })).toHaveCount(0);
   const start = win.getByRole('button', { name: 'Старт', exact: true });
   await expect(start).toBeDisabled();
-  await expect(start).toHaveAttribute('data-tip', 'Выберите хотя бы одну категорию');
-  await expect.poll(() => query<{ value: string }>(dataDir, "select value from settings where key = 'selectedCategories'")[0]?.value).toBe('[]');
+  await expect(start).toHaveAttribute('data-tip', 'В выбранных категориях нет изображений');
   await app.close();
 });

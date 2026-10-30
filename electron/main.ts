@@ -5,8 +5,8 @@ import { pathToFileURL } from 'node:url';
 import { BackupError, exportBackup, importBackup } from '../src/core/backup';
 import { openDb, type Db } from '../src/core/db';
 import { listTree, syncLibrary } from '../src/core/library';
-import { buildQueue, cycleStatus } from '../src/core/picker';
-import { copyPreset, deletePreset, listPresets, savePreset } from '../src/core/presets';
+import { buildSessionQueue, cycleStatus } from '../src/core/picker';
+import { copyPreset, deletePreset, listPresets, savePreset, setPresetCategories } from '../src/core/presets';
 import { IMAGE_COLUMNS, recordView, setRating, toggleRating, toImageRow, undoView } from '../src/core/ratings';
 import { renameNewImages } from '../src/core/rename';
 import { seedDefaultPresets } from '../src/core/defaults';
@@ -115,15 +115,15 @@ function registerIpc() {
   handle('presets:save', (p: Parameters<typeof savePreset>[1]) => savePreset(db, p));
   handle('presets:copy', (id: number) => copyPreset(db, id));
   handle('presets:delete', (id: number) => deletePreset(db, id));
-  handle('session:queue', (ids: number[], count: number) => buildQueue(db, ids, count));
+  handle('presets:categories', (id: number, ids: number[]) => setPresetCategories(db, id, ids));
+  handle('session:queue', (slots: number[][]) => buildSessionQueue(db, slots));
   handle('session:view', (id: number, cycle: number) => recordView(db, id, cycle));
   handle('session:unview', (viewId: number) => undoView(db, viewId));
   handle('session:cycle', (ids: number[]) => cycleStatus(db, ids));
   handle('session:trash', (id: number) => trashImage(db, requireRoot(), id, trashFile));
   handle('settings:get', () => readSettings(db));
-  handle('settings:save', (p: { selectedPreset?: number | null; selectedCategories?: number[]; firstRunDone?: boolean }) => {
+  handle('settings:save', (p: { selectedPreset?: number | null; firstRunDone?: boolean }) => {
     if (p.selectedPreset !== undefined) setSetting(db, 'selectedPreset', p.selectedPreset === null ? '' : String(p.selectedPreset));
-    if (p.selectedCategories !== undefined) setSetting(db, 'selectedCategories', JSON.stringify(p.selectedCategories));
     if (p.firstRunDone) setSetting(db, 'firstRunDone', '1');
   });
   handle('window:fullscreen', (on: boolean) => setFullscreen(on));

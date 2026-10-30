@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import { openDb, type Db } from '../../src/core/db';
-import { buildQueue, cycleStatus, EmptyPoolError, LIKE_WEIGHT, weightedOrder } from '../../src/core/picker';
+import { buildQueue, buildSessionQueue, cycleStatus, EmptyPoolError, LIKE_WEIGHT, weightedOrder } from '../../src/core/picker';
 import { recordView, setRating } from '../../src/core/ratings';
 
 /** Детерминированный генератор (mulberry32). */
@@ -107,5 +107,26 @@ describe('cycleStatus', () => {
 
   test('empty selection gives zeros', () => {
     expect(cycleStatus(db, [])).toEqual({ remaining: 0, total: 0 });
+  });
+});
+
+describe('buildSessionQueue', () => {
+  test('each interval draws only from its own categories', () => {
+    const q = buildSessionQueue(db, [[3], [1], [3], [1, 3]], seeded(5));
+    expect(q).toHaveLength(4);
+    // Категория 1 включает подкатегорию 2; категория 3 — только себя.
+    expect(q[0].categoryId).toBe(3);
+    expect([1, 2]).toContain(q[1].categoryId);
+    expect(q[2].categoryId).toBe(3);
+    expect([1, 2, 3]).toContain(q[3].categoryId);
+  });
+
+  test('intervals with the same set share one cycle order, so there are no repeats within it', () => {
+    const q = buildSessionQueue(db, [[3], [3]], seeded(7));
+    expect(new Set(ids(q)).size).toBe(2);
+  });
+
+  test('an interval with no categories cannot be filled', () => {
+    expect(() => buildSessionQueue(db, [[3], []], seeded(1))).toThrow(EmptyPoolError);
   });
 });

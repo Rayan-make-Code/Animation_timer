@@ -54,6 +54,13 @@ const MIGRATIONS: ((db: Db) => void)[] = [
       );
     `);
   },
+  // Категории пресета и отдельные категории интервала (JSON-массив id папок).
+  (db) => {
+    db.exec(`
+      alter table presets add column category_ids text not null default '[]';
+      alter table preset_groups add column category_ids text not null default '[]';
+    `);
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

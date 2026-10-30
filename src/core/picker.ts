@@ -1,4 +1,5 @@
 import type { Db } from './db';
+import { categoryKey } from './presetModel';
 import { IMAGE_COLUMNS, toImageRow, type ImageRow } from './ratings';
 
 export const LIKE_WEIGHT = 3;
@@ -95,4 +96,20 @@ export function buildQueue(db: Db, categoryIds: number[], count: number, rng: ()
     queue.push(...weightedOrder(next, (q) => weightOf(q.image), rng));
   }
   return queue.slice(0, count);
+}
+
+/**
+ * Очередь сессии по шагам: slots[i] — категории изображения рабочего шага i. Шаги с одним набором категорий
+ * тянут из одной очереди, так что цикл папок соблюдается так же, как для всей сессии.
+ */
+export function buildSessionQueue(db: Db, slots: number[][], rng: () => number = Math.random): QueueItem[] {
+  const byKey = new Map<string, number[]>();
+  slots.forEach((ids, i) => byKey.set(categoryKey(ids), [...(byKey.get(categoryKey(ids)) ?? []), i]));
+  const out: QueueItem[] = [];
+  for (const [key, positions] of byKey) {
+    const ids = key === '' ? [] : key.split(',').map(Number);
+    const items = buildQueue(db, ids, positions.length, rng);
+    positions.forEach((pos, k) => { out[pos] = items[k]; });
+  }
+  return out;
 }

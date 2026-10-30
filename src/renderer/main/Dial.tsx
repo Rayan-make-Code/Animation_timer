@@ -9,7 +9,8 @@ const clock2 = (sec: number) => `${String(Math.floor(sec / 60)).padStart(2, '0')
 
 /** Циферблат пресета: 60 засечек по фазам, длинная засечка — начало отдыха. */
 export function Dial({ preset }: { preset: Preset }) {
-  const steps = expandPreset(preset);
+  // Подготовка на циферблате не показывается: отсчёт начинается с первого интервала.
+  const steps = expandPreset(preset).filter((s) => s.kind !== 'prepare');
   if (steps.length === 0) return null;
   const ticks = dialTicks(steps);
   const [first, second] = steps;

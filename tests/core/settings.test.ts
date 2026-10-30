@@ -20,17 +20,16 @@ describe('settings', () => {
     expect(parseIds('{"a":1}')).toEqual([]);
   });
 
-  test('readSettings: fresh database is a first run with nothing selected', () => {
+  test('readSettings: fresh database is a first run with no preset', () => {
     const db = openDb(':memory:');
-    expect(readSettings(db)).toEqual({ selectedPreset: null, selectedCategories: [], firstRunDone: false });
+    expect(readSettings(db)).toEqual({ selectedPreset: null, firstRunDone: false });
   });
 
-  test('readSettings: saved selection and the first-run flag', () => {
+  test('readSettings: saved preset and the first-run flag', () => {
     const db = openDb(':memory:');
     setSetting(db, 'selectedPreset', '4');
-    setSetting(db, 'selectedCategories', '[1,2]');
     setSetting(db, 'firstRunDone', '1');
-    expect(readSettings(db)).toEqual({ selectedPreset: 4, selectedCategories: [1, 2], firstRunDone: true });
+    expect(readSettings(db)).toEqual({ selectedPreset: 4, firstRunDone: true });
     setSetting(db, 'selectedPreset', '');
     expect(readSettings(db).selectedPreset).toBeNull();
   });

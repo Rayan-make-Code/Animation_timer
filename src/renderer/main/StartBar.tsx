@@ -1,40 +1,48 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Preset } from '../../shared/api';
 import { formatClock, totalSec } from '../../core/dial';
+import { categoryKey } from '../../core/presetModel';
 import { expandPreset, totalWork } from '../../core/timer';
 import { Icon, PlayIcon } from '../components';
 import { errorText, useStore } from '../store';
 
 /** Блок «Старт»: сумма, правка и удаление пресета, запуск сессии. */
 export function StartBar({ preset, onEdit, onDelete }: { preset: Preset | null; onEdit: () => void; onDelete: () => Promise<void> }) {
-  const { library, tree, selected, session, setSession, setNotice, firstRun, finishFirstRun, finishedSummary, setFinishedSummary } = useStore();
-  // Остаток цикла нужен только для проверки: в выбранных категориях должны быть изображения.
-  const [cycle, setCycle] = useState<{ remaining: number; total: number } | null>(null);
+  const { library, tree, session, setSession, setNotice, firstRun, finishFirstRun, finishedSummary, setFinishedSummary } = useStore();
+  // В наборе категорий каждого рабочего шага должны быть изображения; пустой набор блокирует старт.
+  const [emptyPool, setEmptyPool] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Запуск уже идёт: повторный щелчок (двойной клик) игнорируется.
   const starting = useRef(false);
 
-  // Пересчёт после смены категорий, обновления библиотеки и окончания сессии.
-  useEffect(() => {
-    if (!library || selected.length === 0) return setCycle(null);
-    let live = true;
-    window.sketch.cycleStatus(selected).then((c) => live && setCycle(c), () => live && setCycle(null));
-    return () => { live = false; };
-  }, [library, tree, selected, session]);
-  useEffect(() => setConfirmDelete(false), [preset?.id]);
-
   const steps = preset ? expandPreset(preset) : [];
   const count = totalWork(steps);
+  // Категории каждого рабочего шага (в порядке очереди) и уникальные наборы для проверки.
+  const slots = steps.filter((s) => s.kind === 'work').map((s) => s.categoryIds);
+  const keys = [...new Set(slots.map(categoryKey))];
+  const keyList = keys.join('|');
+  const hasEmptySet = keys.includes('');
+
+  // Пересчёт после смены категорий, обновления библиотеки и окончания сессии.
+  useEffect(() => {
+    if (!library || keys.length === 0 || hasEmptySet) return setEmptyPool(false);
+    let live = true;
+    const checks = keys.map((k) => window.sketch.cycleStatus(k.split(',').map(Number)).then((c) => c.total === 0, () => true));
+    void Promise.all(checks).then((empties) => live && setEmptyPool(empties.some(Boolean)));
+    return () => { live = false; };
+  }, [library, tree, keyList, hasEmptySet, session]);
+  useEffect(() => setConfirmDelete(false), [preset?.id]);
+
   const blocked = !library ? 'Сначала выберите папку библиотеки'
-    : selected.length === 0 ? 'Выберите хотя бы одну категорию'
-      : cycle?.total === 0 ? 'В выбранных категориях нет изображений'
-        : !preset ? 'Сначала создайте пресет' : null;
+    : !preset ? 'Сначала создайте пресет'
+      : hasEmptySet ? 'Выберите категории для пресета или отдельного этапа'
+        : emptyPool ? 'В выбранных категориях нет изображений' : null;
 
   const start = async () => {
     if (blocked || !preset || starting.current) return;
     starting.current = true;
     try {
-      const queue = await window.sketch.buildQueue(selected, count);
+      const queue = await window.sketch.buildQueue(slots);
       if (firstRun) finishFirstRun();
       setFinishedSummary(null);
       await window.sketch.setFullscreen(true);

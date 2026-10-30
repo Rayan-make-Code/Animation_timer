@@ -1,15 +1,16 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import { openDb, type Db } from '../../src/core/db';
-import { copyPreset, deletePreset, listPresets, savePreset, validatePreset, type NewPreset } from '../../src/core/presets';
+import { copyPreset, deletePreset, listPresets, savePreset, setPresetCategories, validatePreset, type NewPreset } from '../../src/core/presets';
 
 const sample: NewPreset = {
   name: 'Разминка',
   description: 'Пример из описания продукта',
+  categoryIds: [],
   groups: [
-    { repeats: 1, workLabel: 'Приготовьтесь', workSec: 5, restSec: 0 },
-    { repeats: 35, workLabel: 'Быстрые наброски', workSec: 60, restSec: 15 },
-    { repeats: 2, workLabel: 'Формы', workSec: 180, restSec: 15 },
-    { repeats: 1, workLabel: 'Конструкция', workSec: 300, restSec: 15 },
+    { repeats: 1, workLabel: 'Приготовьтесь', workSec: 5, restSec: 0, categoryIds: [] },
+    { repeats: 35, workLabel: 'Быстрые наброски', workSec: 60, restSec: 15, categoryIds: [] },
+    { repeats: 2, workLabel: 'Формы', workSec: 180, restSec: 15, categoryIds: [] },
+    { repeats: 1, workLabel: 'Конструкция', workSec: 300, restSec: 15, categoryIds: [] },
   ],
 };
 
@@ -20,6 +21,20 @@ describe('presets', () => {
   test('round-trips the example preset keeping group order', () => {
     const id = savePreset(db, sample);
     expect(listPresets(db)).toEqual([{ id, ...sample }]);
+  });
+
+  test('categories of the preset and of single intervals are kept', () => {
+    const id = savePreset(db, { ...sample, categoryIds: [3, 5], groups: [sample.groups[0], { ...sample.groups[1], categoryIds: [7] }] });
+    const [saved] = listPresets(db);
+    expect(saved.categoryIds).toEqual([3, 5]);
+    expect(saved.groups.map((g) => g.categoryIds)).toEqual([[], [7]]);
+    setPresetCategories(db, id, [9]);
+    expect(listPresets(db)[0].categoryIds).toEqual([9]);
+    expect(listPresets(db)[0].groups[1].categoryIds).toEqual([7]);
+  });
+
+  test('setPresetCategories refuses an unknown preset', () => {
+    expect(() => setPresetCategories(db, 999, [1])).toThrow('Пресет не найден.');
   });
 
   test('saving with an id replaces the groups', () => {
