@@ -26,6 +26,7 @@
   --prepare-bg: #22232a;
   --sub: #aab6ff;
   --frame: rgba(0, 0, 0, .8);
+  --neon: #39f5ff;
   --danger: #ff8f8f;
   --focus: #c7cfff;
   --title-h: 38px;
@@ -56,7 +57,7 @@ button { cursor: pointer; }
 @keyframes swapIn { from { opacity: 0; transform: scale(.97); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
 .swap { animation: swapIn .34s var(--hover-ease) both; }
 @media (prefers-reduced-motion: reduce) {
-  .slide, .rise, .swap { animation: none; }
+  .slide, .rise, .swap, .sector.lit .sector-fill, .s-btn:hover .exit-man { animation: none; }
 }
 
 /* Кнопки */
@@ -185,24 +186,25 @@ button.icon-btn.danger:hover:not(:disabled) { color: var(--fix); }
 .lib-path svg { flex: none; color: var(--text-3); }
 
 /* Сессия: изображение на весь экран, полоса прогресса, «шторка» и панель кнопок */
-/* Хедер и рамка вокруг изображения — одна сплошная рамка (чёрная 80%) толщиной --frame-w;
-   сверху её роль играет сам хедер, отдельного верхнего бордера нет. */
-.session { --frame-w: 33px; position: fixed; inset: 0; overflow: hidden; background: #0c0d10; display: flex; flex-direction: column; padding: 6px; }
-.stage { position: relative; flex: 1; min-height: 0; background: var(--frame); border-radius: 0 0 7.5px 7.5px; overflow: hidden; }
-.stage::before { content: ''; position: absolute; inset: 0 var(--frame-w) var(--frame-w); background: #0c0d10; }
-.stage-img { position: absolute; inset: 0 var(--frame-w) var(--frame-w); width: calc(100% - 2 * var(--frame-w)); height: calc(100% - var(--frame-w)); object-fit: contain; transition: opacity .3s; }
+/* Хедер и рамка вокруг изображения — одна сплошная рамка (чёрная 80%) от края окна, без отступа и скругления.
+   Сверху её роль играет хедер (--head-h), по бокам и снизу — бордер толщиной --frame-w. */
+.session { --head-h: 33px; --frame-w: 16.5px; --frame-b: 42px; position: fixed; inset: 0; overflow: hidden; background: #0c0d10; display: flex; flex-direction: column; }
+.stage { position: relative; flex: 1; min-height: 0; background: var(--frame); overflow: hidden; }
+.stage::before { content: ''; position: absolute; inset: 0 var(--frame-w) var(--frame-b); background: #0c0d10; }
+.stage-img { position: absolute; inset: 0 var(--frame-w) var(--frame-b); width: calc(100% - 2 * var(--frame-w)); height: calc(100% - var(--frame-b)); object-fit: contain; transition: opacity .3s; }
 .stage-img.dim { opacity: .35; }
 /* Шапка сессии: верхняя часть рамки, тонкая полоса прогресса и таймер в конце. */
-.session-head { flex: none; height: var(--frame-w); box-sizing: border-box; display: flex; align-items: center; gap: 14px; padding: 0 var(--frame-w); background: var(--frame); border-radius: 7.5px 7.5px 0 0; }
-.session-progress { flex: 1; height: 2px; border-radius: 1px; overflow: hidden; background: rgba(43, 44, 52, .85); }
-.session-progress-fill { height: 100%; background: var(--work); transition: width .3s var(--hover-ease); }
+.session-head { flex: none; height: var(--head-h); box-sizing: border-box; display: flex; align-items: center; gap: 14px; padding: 0 var(--frame-w); background: var(--frame); }
+/* Прогресс: сектор на каждый рисунок, неоновое заполнение; заполненные секторы «горят». */
+.session-progress { flex: 1; height: 3px; display: flex; gap: 2px; }
+.sector { flex: 1; min-width: 0; border-radius: 1.5px; background: rgba(43, 44, 52, .85); }
+.sector-fill { height: 100%; border-radius: inherit; background: var(--neon); box-shadow: 0 0 4px var(--neon); transition: width .1s linear; }
+.sector.lit .sector-fill { animation: neon-burn 2.4s ease-in-out infinite alternate; }
+@keyframes neon-burn { from { box-shadow: 0 0 3px var(--neon), 0 0 6px rgba(57, 245, 255, .35); } to { box-shadow: 0 0 5px var(--neon), 0 0 12px rgba(57, 245, 255, .6); } }
 .session-strip { flex: none; display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text-3); }
-.phase-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--work); }
-.phase-dot.rest { background: var(--done); }
-.phase-dot.prepare { background: var(--prepare); }
 .session-time { font-family: var(--digits); font-weight: 200; font-size: 19px; font-variant-numeric: tabular-nums; color: var(--text-2); }
 .session-count { font-variant-numeric: tabular-nums; }
-.session-dock { position: absolute; z-index: 1; right: calc(14px + var(--frame-w)); bottom: calc(14px + var(--frame-w)); display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.session-dock { position: absolute; z-index: 1; right: var(--frame-w); bottom: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .session-error { max-width: 360px; padding: 4px 9px; border: 1px solid var(--fix-line); background: rgba(48, 26, 28, .92); color: var(--fix); border-radius: 4px; font-size: 12.5px; }
 .session-tools { display: flex; gap: 6px; }
 .s-btn { width: 42px; height: 42px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6.5px; background: transparent; color: var(--text-2); }

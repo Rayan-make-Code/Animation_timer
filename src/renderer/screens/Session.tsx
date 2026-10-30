@@ -135,16 +135,21 @@ export function Session() {
   const image = m.currentImage.image;
   const liked = (ratings[image.id] ?? image.rating) === 1;
   const phase = m.step.kind;
+  // Доля текущего рисунка: сектор заполняется плавно, пока идёт рабочий этап.
+  const current = phase === 'work' ? 1 - m.remainingMs / (m.step.sec * 1000) : 0;
   const paused = m.state === 'paused';
 
   return (
     <div className="session">
       <header className="session-head">
         <div className="session-progress" role="progressbar" aria-label="Прогресс сессии" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
-          <div className="session-progress-fill" style={{ width: `${total ? (done / total) * 100 : 0}%` }} />
+          {Array.from({ length: total }, (_, i) => (
+            <div key={i} className={`sector${i < done ? ' lit' : ''}`}>
+              <div className="sector-fill" style={{ width: `${i < done ? 100 : i === done ? current * 100 : 0}%` }} />
+            </div>
+          ))}
         </div>
         <div className="session-strip">
-          <span className={`phase-dot ${phase}`} aria-hidden="true" />
           <span className="session-count">{done}/{total}</span>
           <span className="session-time">{mmss(Math.ceil(m.remainingMs / 1000))}</span>
         </div>
