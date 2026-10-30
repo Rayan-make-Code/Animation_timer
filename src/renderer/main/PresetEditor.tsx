@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type CSSProperties, type FocusEvent } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent } from 'react';
 import type { NewPreset } from '../../shared/api';
 import { validatePreset, type Group } from '../../core/presetModel';
 import { addGroup, duplicateGroup, moveGroupUp, parseMmss, removeGroup } from '../../core/presetEdit';
@@ -64,6 +64,9 @@ function MmssInput({ value, label, onChange }: { value: number; label: string; o
   );
 }
 
+/** Сколько этапов видно в редакторе без прокрутки. */
+const VISIBLE_ROWS = 3;
+
 export interface EditorHandle {
   /** Сохраняет черновик; false — есть ошибки или сохранение не удалось, редактор остаётся открытым. */
   commit(): Promise<boolean>;
@@ -104,6 +107,14 @@ export const PresetEditor = forwardRef<EditorHandle, {
     setDraft({ ...draft, groups: g });
     setSel(Math.max(0, Math.min(nextSel, g.length - 1)));
   };
+  // Видно не больше трёх этапов; остальные прокручиваются внутри списка.
+  const list = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = list.current;
+    if (!el) return;
+    const rows = [...el.querySelectorAll<HTMLElement>(':scope > .ed-row')];
+    el.style.maxHeight = rows.length > VISIBLE_ROWS ? `${rows.slice(0, VISIBLE_ROWS).reduce((h, r) => h + r.offsetHeight, 0)}px` : '';
+  });
   useEffect(() => {
     if (!reveal.current) return;
     reveal.current = false;
@@ -160,7 +171,7 @@ export const PresetEditor = forwardRef<EditorHandle, {
         <button className="icon-btn ed-save" aria-label="Сохранить пресет" data-tip="Сохранить" disabled={errors.length > 0} onClick={() => void persist(draft)}><Icon name="save" /></button>
       </div>
       {/* Этапы прокручиваются внутри редактора (без полосы), кнопки под ним остаются на месте. */}
-      <div className="ed-groups">
+      <div className="ed-groups" ref={list}>
       {groups.map((g, i) => {
         const n = i + 1;
         // Строка подготовки (первая) без поля повторов, отдыха и своих категорий.

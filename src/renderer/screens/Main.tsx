@@ -86,12 +86,13 @@ export function Main() {
         ) : (
           preset && <Dial key={preset.id} preset={preset} />
         )}
-        {preset && (
+        {preset && !editing && (
           <section className="desc" aria-label="Описание">
             <span className="desc-name">{preset.name}</span>{preset.description ? ` — ${preset.description}` : ''}
           </section>
         )}
-        <StartBar preset={preset} onEdit={() => preset && setEditing(editOf(preset))} onDelete={remove} beforeStart={back} />
+        {/* В редакторе кнопок нет: к ним ведёт стрелка «назад». */}
+        {!editing && <StartBar preset={preset} onEdit={() => preset && setEditing(editOf(preset))} onDelete={remove} beforeStart={back} />}
         {notice && (
           <div className="notice" role="status">
             <span>{notice}</span>
