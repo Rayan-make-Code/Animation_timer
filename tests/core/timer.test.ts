@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { expandPreset, SessionMachine, totalWork, type Step } from '../../src/core/timer';
+import { dropImage, expandPreset, SessionMachine, totalWork, type Step } from '../../src/core/timer';
 import type { NewPreset } from '../../src/core/presets';
 import type { QueueItem } from '../../src/core/picker';
 
@@ -149,6 +149,86 @@ describe('SessionMachine', () => {
   test('finish() ends the session immediately', () => {
     const { machine } = setup(simple, 3);
     machine.finish();
+    expect(machine.state).toBe('finished');
+  });
+});
+
+describe('tick return value', () => {
+  test('tick returns how many steps ended', () => {
+    const { machine } = setup(
+      [
+        { repeats: 1, workLabel: 'P', workSec: 5, restSec: 0 },
+        { repeats: 1, workLabel: 'W', workSec: 60, restSec: 0 },
+      ],
+      1,
+    );
+    expect(machine.tick(4000)).toBe(0);
+    expect(machine.tick(2000)).toBe(1);
+    expect(machine.tick(200000)).toBe(1);
+    expect(machine.state).toBe('finished');
+  });
+
+  test('next() and prev() do not affect the count of subsequent ticks', () => {
+    const { machine } = setup(simple, 3);
+    machine.next();
+    expect(machine.tick(10000)).toBe(1);
+    machine.prev();
+    expect(machine.tick(10000)).toBe(1);
+  });
+});
+
+const ids = (q: QueueItem[]) => q.map((x) => x.image.id);
+const queueOf = (list: number[]) => list.map((id, i) => ({ ...item(id), cycle: 1 + Math.floor(i / 4) }));
+
+describe('dropImage', () => {
+  test('later entries of the image are replaced by the image of the queue seen farthest away', () => {
+    const q = queueOf([1, 2, 3, 4, 1, 2, 3, 4]);
+    const out = dropImage(q, 1, 0);
+    expect(ids(out)).toEqual([1, 2, 3, 4, 3, 2, 3, 4]);
+    // Замена — копия ближайшего предыдущего показа этого изображения: та же папка и цикл.
+    expect(out[4]).toEqual(q[2]);
+    expect(ids(q)).toEqual([1, 2, 3, 4, 1, 2, 3, 4]);
+  });
+
+  test('entries up to and including the current one stay', () => {
+    const q = queueOf([1, 2, 1, 3, 1]);
+    expect(ids(dropImage(q, 1, 2))).toEqual([1, 2, 1, 3, 2]);
+  });
+
+  test('no other image in the queue: the queue ends at the current entry', () => {
+    expect(ids(dropImage(queueOf([5, 5, 5]), 5, 0))).toEqual([5]);
+  });
+
+  test('nothing to replace: the same entries', () => {
+    expect(ids(dropImage(queueOf([1, 2, 3]), 1, 0))).toEqual([1, 2, 3]);
+  });
+});
+
+describe('SessionMachine.replaceImage', () => {
+  function machineOf(list: number[], groups = simple) {
+    const viewed: number[] = [];
+    const machine = new SessionMachine(expandPreset({ name: 'p', description: '', groups }), queueOf(list), {
+      onViewed: (q) => { viewed.push(q.image.id); return 0; },
+      onUnviewed: () => {},
+    });
+    return { machine, viewed };
+  }
+
+  test('a disliked image does not come back later in the session', () => {
+    const { machine, viewed } = machineOf([1, 2, 1], [{ repeats: 3, workLabel: 'W', workSec: 10, restSec: 0 }]);
+    machine.replaceImage(1);
+    machine.next();
+    machine.tick(60_000);
+    expect(viewed).toEqual([2, 2]);
+    expect(machine.progress).toEqual({ done: 2, total: 3 });
+  });
+
+  test('when only the disliked image is left, the schedule ends after the current interval', () => {
+    const { machine } = machineOf([7, 7, 7]);
+    machine.replaceImage(7);
+    expect(machine.progress.total).toBe(1);
+    expect(machine.steps.every((s) => s.workIndex === 0)).toBe(true);
+    machine.next();
     expect(machine.state).toBe('finished');
   });
 });

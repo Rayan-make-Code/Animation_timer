@@ -4,8 +4,9 @@ import type { QueueItem } from '../core/picker';
 import type { NewPreset, Preset } from '../core/presets';
 import type { ImageRow, Rating } from '../core/ratings';
 import type { RenameReport } from '../core/rename';
+import type { Settings } from '../core/settings';
 
-export type { CategoryNode, ImageRow, ImportReport, NewPreset, Preset, QueueItem, Rating, RenameReport, SyncResult };
+export type { CategoryNode, ImageRow, ImportReport, NewPreset, Preset, QueueItem, Rating, RenameReport, Settings, SyncResult };
 
 export interface AppState { library: string | null; dataDir: string; version: string }
 
@@ -18,7 +19,6 @@ export interface SketchApi {
   syncLibrary(): Promise<{ sync: SyncResult; rename: RenameReport }>;
   renameNew(): Promise<RenameReport>;
   getTree(): Promise<CategoryNode[]>;
-  listRated(rating: 1 | -1): Promise<ImageRow[]>;
   toggleRating(imageId: number, target: 1 | -1): Promise<Rating>;
   setRating(imageId: number, rating: Rating): Promise<void>;
   listPresets(): Promise<Preset[]>;
@@ -31,6 +31,12 @@ export interface SketchApi {
   /** Диалог сохранения. Возвращает путь файла или null при отмене. */
   exportBackup(includeViews: boolean): Promise<string | null>;
   importBackup(): Promise<ImportReport | null>;
+  /** Сколько картинок осталось в текущем круге и сколько всего. */
+  cycleStatus(categoryIds: number[]): Promise<{ remaining: number; total: number }>;
+  /** Переносит файл изображения в корзину и убирает его из библиотеки. */
+  trashImage(imageId: number): Promise<void>;
+  getSettings(): Promise<Settings>;
+  saveSettings(p: Partial<Settings>): Promise<void>;
   setFullscreen(on: boolean): Promise<void>;
   minimize(): void;
   close(): void;

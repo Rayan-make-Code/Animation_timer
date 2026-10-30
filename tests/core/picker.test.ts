@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import { openDb, type Db } from '../../src/core/db';
-import { buildQueue, EmptyPoolError, LIKE_WEIGHT, weightedOrder } from '../../src/core/picker';
-import { recordView } from '../../src/core/ratings';
+import { buildQueue, cycleStatus, EmptyPoolError, LIKE_WEIGHT, weightedOrder } from '../../src/core/picker';
+import { recordView, setRating } from '../../src/core/ratings';
 
 /** Детерминированный генератор (mulberry32). */
 function seeded(seed: number): () => number {
@@ -75,5 +75,37 @@ describe('weightedOrder', () => {
     const plain = (firsts.a + firsts.b + firsts.c) / 3;
     expect(firsts.like / plain).toBeGreaterThan(LIKE_WEIGHT * 0.85);
     expect(firsts.like / plain).toBeLessThan(LIKE_WEIGHT * 1.15);
+  });
+});
+
+describe('cycleStatus', () => {
+  test('fresh library: everything remains, subcategories included', () => {
+    expect(cycleStatus(db, [1])).toEqual({ remaining: 7, total: 7 });
+  });
+
+  test('a recorded view decreases remaining', () => {
+    recordView(db, 1, 1);
+    expect(cycleStatus(db, [1])).toEqual({ remaining: 6, total: 7 });
+  });
+
+  test('fully viewed category resets to the full count', () => {
+    for (const id of [8, 9]) recordView(db, id, 1);
+    expect(cycleStatus(db, [3])).toEqual({ remaining: 2, total: 2 });
+  });
+
+  test('sums several categories', () => {
+    recordView(db, 8, 1);
+    expect(cycleStatus(db, [1, 3])).toEqual({ remaining: 8, total: 9 });
+  });
+
+  test('disliked and missing images are excluded from both numbers', () => {
+    setRating(db, 1, -1);
+    db.prepare('update images set missing = 1 where id = 2').run();
+    recordView(db, 3, 1);
+    expect(cycleStatus(db, [1])).toEqual({ remaining: 4, total: 5 });
+  });
+
+  test('empty selection gives zeros', () => {
+    expect(cycleStatus(db, [])).toEqual({ remaining: 0, total: 0 });
   });
 });

@@ -30,12 +30,37 @@ export function expandPreset(p: NewPreset): Step[] {
   return steps;
 }
 
-export const totalWork = (steps: Step[]): number => steps.filter((s) => s.kind === 'work').length;
+export const totalWork = (steps: readonly Step[]): number => steps.filter((s) => s.kind === 'work').length;
 
 export interface SessionHooks<H = number> {
   /** Вызывается один раз по окончании рабочего интервала; возвращает id записи для отката. */
   onViewed(item: QueueItem): H;
   onUnviewed(handle: H): void;
+}
+
+/**
+ * Дизлайкнутое изображение не должно вернуться позже в той же сессии (очередь повторяет пул, если изображений мало).
+ * Его записи после позиции after заменяются другим изображением этой же очереди — тем, чей ближайший показ дальше всего;
+ * замена копирует ближайший предыдущий показ (папка и цикл те же). Если других изображений нет, очередь обрывается на after.
+ */
+export function dropImage(queue: QueueItem[], imageId: number, after: number): QueueItem[] {
+  const out = [...queue];
+  const others = [...new Set(queue.filter((q) => q.image.id !== imageId).map((q) => q.image.id))];
+  for (let j = after + 1; j < out.length; j++) {
+    if (out[j].image.id !== imageId) continue;
+    if (others.length === 0) return out.slice(0, after + 1);
+    const spots = (id: number) => out.flatMap((q, i) => (q.image.id === id ? [i] : []));
+    let best = others[0];
+    let bestDist = -1;
+    for (const id of others) {
+      const dist = Math.min(...spots(id).map((i) => Math.abs(i - j)));
+      if (dist > bestDist) [best, bestDist] = [id, dist];
+    }
+    const at = spots(best);
+    const before = at.filter((i) => i < j);
+    out[j] = out[before.length ? before[before.length - 1] : at[0]];
+  }
+  return out;
 }
 
 export type SessionState = 'running' | 'paused' | 'finished';
@@ -45,9 +70,27 @@ export class SessionMachine<H = number> {
   stepIndex = 0;
   remainingMs: number;
   private views = new Map<number, H>();
+  private _steps: Step[];
+  private _queue: QueueItem[];
 
-  constructor(readonly steps: Step[], readonly queue: QueueItem[], private hooks: SessionHooks<H>) {
+  constructor(steps: Step[], queue: QueueItem[], private hooks: SessionHooks<H>) {
+    this._steps = steps;
+    this._queue = queue;
     this.remainingMs = steps[0].sec * 1000;
+  }
+
+  get steps(): readonly Step[] {
+    return this._steps;
+  }
+
+  get queue(): readonly QueueItem[] {
+    return this._queue;
+  }
+
+  /** Изображение ушло в корзину: дальше по очереди его заменяет другое; если заменить нечем, расписание укорачивается. */
+  replaceImage(imageId: number): void {
+    this._queue = dropImage(this._queue, imageId, this.step.workIndex);
+    this._steps = this._steps.filter((s) => s.workIndex < this._queue.length);
   }
 
   get step(): Step {
@@ -62,17 +105,20 @@ export class SessionMachine<H = number> {
     return { done: this.views.size, total: totalWork(this.steps) };
   }
 
-  /** Время течёт только в состоянии running; elapsedMs можно передавать большими порциями. */
-  tick(elapsedMs: number): void {
+  /** Время течёт только в состоянии running; elapsedMs можно передавать большими порциями. Возвращает число шагов, закончившихся по времени. */
+  tick(elapsedMs: number): number {
     let left = elapsedMs;
+    let completed = 0;
     while (left > 0 && this.state === 'running') {
       if (left < this.remainingMs) {
         this.remainingMs -= left;
-        return;
+        break;
       }
       left -= this.remainingMs;
       this.completeStep();
+      completed++;
     }
+    return completed;
   }
 
   pause(): void {

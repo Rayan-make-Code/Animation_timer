@@ -57,10 +57,10 @@ export function makeLibrary(): string {
   return root;
 }
 
-export async function launch(dataDir = path.join(tempRoot(), 'data'), library?: string): Promise<Running> {
+export async function launch(dataDir = path.join(tempRoot(), 'data'), library?: string, env: Record<string, string> = {}): Promise<Running> {
   const app = await electron.launch({
     args: ['.', '--no-sandbox'],
-    env: { ...process.env, SKETCH_DATA_DIR: dataDir, SKETCH_SKIP_STARTUP_SYNC: '1' } as Record<string, string>,
+    env: { ...process.env, SKETCH_DATA_DIR: dataDir, SKETCH_SKIP_STARTUP_SYNC: '1', ...env } as Record<string, string>,
   });
   if (library) {
     // Нативный диалог выбора папки подменяется в главном процессе.
