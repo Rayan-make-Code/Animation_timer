@@ -83,6 +83,8 @@ export function Session() {
     const id = m.currentImage.image.id;
     try {
       await window.sketch.trashImage(id);
+      // Файла больше нет: дальше по очереди это изображение заменяется другим.
+      m.replaceImage(id);
       // Пока файл переносился, шаг мог смениться сам.
       if (m.currentImage.image.id === id) m.next();
       rerender();

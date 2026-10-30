@@ -88,6 +88,21 @@ test('D moves the file to the recycle bin and shows the next image', async () =>
   await app.close();
 });
 
+test('a disliked image does not come back later in the same session', async () => {
+  // В «Позах» меньше изображений, чем интервалов: очередь повторяет их.
+  const { app, win } = await prepare(60, 8);
+  const first = await image(win).getAttribute('src');
+  await win.keyboard.press('d');
+  await expect(image(win)).not.toHaveAttribute('src', first!);
+  await expect(win.locator('.session-count')).toHaveText('0/8');
+  for (let i = 1; i < 8; i++) {
+    await expect(image(win)).not.toHaveAttribute('src', first!);
+    await win.keyboard.press('ArrowRight');
+  }
+  await expect(win.getByText('Сессия завершена: 0 рис.')).toBeVisible();
+  await app.close();
+});
+
 test('D on the last image trashes it and finishes the session', async () => {
   const { app, win, trash } = await prepare(60, 1);
   await win.getByRole('button', { name: 'Дизлайк: переместить в корзину' }).click();
