@@ -3,11 +3,20 @@ import { imageUrl } from '../../shared/api';
 import { expandPreset, SessionMachine } from '../../core/timer';
 import { mmss } from '../../core/dial';
 import { BackIcon, ExitArrowIcon, ForwardIcon, HeartIcon, PauseIcon, PlayIcon, ThumbDownIcon } from '../icons';
-import { playChime } from '../sound';
+import { playChime, playWarning } from '../sound';
 import { errorText, useStore } from '../store';
 
 /** Сколько висит строка ошибки над панелью, мс. */
 const ERROR_MS = 4000;
+const WARN_SEC = 5;
+
+/** Короткая анимация нажатия: класс снимается и ставится заново, чтобы анимация шла и при повторе. */
+function bump(el: HTMLElement | null): void {
+  if (!el) return;
+  el.classList.remove('bump');
+  void el.offsetWidth;
+  el.classList.add('bump');
+}
 
 /** Полноэкранная сессия: изображение, полоса прогресса, «шторка» со временем и панель кнопок. */
 export function Session() {
@@ -47,7 +56,11 @@ export function Session() {
       // После выхода время больше не идёт: ни просмотров, ни сигнала.
       if (leaving.current) return;
       const now = performance.now();
+      const step = m.step;
+      const before = m.remainingMs;
       if (m.tick(now - last) > 0) playChime();
+      // За 5 секунд до конца интервала — мягкое предупреждение (только если интервал длиннее 5 секунд).
+      else if (m.step === step && step.sec > WARN_SEC && before > WARN_SEC * 1000 && m.remainingMs <= WARN_SEC * 1000) playWarning();
       last = now;
       rerender();
     }, 100);
@@ -65,8 +78,12 @@ export function Session() {
     return () => clearTimeout(t);
   }, [error]);
 
+  const likeBtn = useRef<HTMLButtonElement>(null);
+  const dislikeBtn = useRef<HTMLButtonElement>(null);
+
   const like = useCallback(async () => {
     if (leaving.current) return;
+    bump(likeBtn.current);
     const id = m.currentImage.image.id;
     try {
       const next = await window.sketch.toggleRating(id, 1);
@@ -76,10 +93,11 @@ export function Session() {
     }
   }, [m]);
 
-  /** Дизлайк: к имени файла добавляется «_del», сразу следующее изображение; при ошибке остаёмся на месте. */
+  /** Дизлайк: файл уходит в папку trash с «_del» в имени, сразу следующее изображение; при ошибке остаёмся на месте. */
   const dislike = useCallback(async () => {
     if (disliking.current || leaving.current) return;
     disliking.current = true;
+    bump(dislikeBtn.current);
     const id = m.currentImage.image.id;
     try {
       await window.sketch.dislikeImage(id);
@@ -161,14 +179,14 @@ export function Session() {
       <div className="session-dock">
         {error && <div className="session-error" role="alert">{error}</div>}
         <div className="session-tools" role="toolbar" aria-label="Управление сессией">
-          <button className="s-btn" aria-label="Предыдущее изображение" data-tip="Назад (←)" onClick={() => go('prev')}><BackIcon /></button>
+          <button className="s-btn" aria-label="Предыдущее изображение" data-tip="Предыдущий (←)" onClick={() => go('prev')}><BackIcon /></button>
           <button className="s-btn main" aria-label={paused ? 'Продолжить' : 'Пауза'} data-tip={paused ? 'Продолжить (Пробел)' : 'Пауза (Пробел)'} onClick={togglePause}>
             {paused ? <PlayIcon /> : <PauseIcon />}
           </button>
-          <button className="s-btn" aria-label="Следующее изображение" data-tip="Вперёд (→)" onClick={() => go('next')}><ForwardIcon /></button>
+          <button className="s-btn" aria-label="Следующее изображение" data-tip="Следующий (→)" onClick={() => go('next')}><ForwardIcon /></button>
           <span className="session-count" aria-label="Нарисовано">{done}/{total}</span>
-          <button className={`s-btn like${liked ? ' on' : ''}`} aria-label="Лайк" aria-pressed={liked} data-tip="Лайк (L)" onClick={() => void like()}><HeartIcon /></button>
-          <button className="s-btn dislike" aria-label="Дизлайк: убрать из сессий" data-tip="Дизлайк: пометить файл _del (D)" onClick={() => void dislike()}><ThumbDownIcon /></button>
+          <button ref={likeBtn} className={`s-btn like${liked ? ' on' : ''}`} aria-label="Лайк" aria-pressed={liked} data-tip="Нравится (L)" onClick={() => void like()}><HeartIcon /></button>
+          <button ref={dislikeBtn} className="s-btn dislike" aria-label="Дизлайк: убрать из сессий" data-tip="В trash (D)" onClick={() => void dislike()}><ThumbDownIcon /></button>
           <button className="s-btn" aria-label="Выйти из сессии" data-tip="Выйти (Esc)" onClick={() => void leave(false)}><ExitArrowIcon /></button>
         </div>
       </div>

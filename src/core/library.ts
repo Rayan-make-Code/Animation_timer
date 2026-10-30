@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Db } from './db';
-import { isDislikedName } from './dislike';
+import { isDislikedName, isTrashPath } from './dislike';
 import { isSupportedImage } from './formats';
 
 export interface SyncResult { addedImages: number; addedCategories: number; missing: number; restored: number }
@@ -26,6 +26,8 @@ async function walk(root: string, categoryRel: string, cats: Set<string>, images
   for (const e of entries) {
     if (e.isDirectory()) {
       const rel = join(categoryRel, e.name);
+      // Папка trash с дизлайками не категория.
+      if (isTrashPath(rel)) continue;
       cats.add(rel);
       await walk(root, rel, cats, images);
     } else if (e.isFile() && isSupportedImage(e.name)) {
@@ -94,7 +96,8 @@ export async function syncLibrary(db: Db, root: string): Promise<SyncResult> {
 }
 
 export function listTree(db: Db): CategoryNode[] {
-  const cats = db.prepare('select id, parent_id as parentId, name, rel_path as relPath from categories order by name').all() as Omit<CategoryNode, 'imageCount' | 'children'>[];
+  const cats = (db.prepare('select id, parent_id as parentId, name, rel_path as relPath from categories order by name').all() as Omit<CategoryNode, 'imageCount' | 'children'>[])
+    .filter((c) => !isTrashPath(c.relPath));
   const counts = new Map<number, number>();
   for (const r of db.prepare('select category_id as id, count(*) as c from images where missing = 0 and rating != -1 group by category_id').all() as { id: number; c: number }[]) counts.set(r.id, r.c);
   const nodes = new Map<number, CategoryNode>(cats.map((c) => [c.id, { ...c, imageCount: counts.get(c.id) ?? 0, children: [] }]));

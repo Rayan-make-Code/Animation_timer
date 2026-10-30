@@ -38,16 +38,16 @@ export function Footer({ open, onToggle }: { open: boolean; onToggle: () => void
     <footer className={`footer${open ? '' : ' collapsed'}`}>
       {open && (
         <div className="lib-panel slide" role="toolbar" aria-label="Библиотека">
-          <button className="btn small" data-tip="Обновить библиотеку" disabled={busy || !library} onClick={() => run(async () => summary(await window.sketch.syncLibrary()))}>Обновить</button>
-          <button className="btn small" data-tip="Переименовать новые файлы" disabled={busy || !library} onClick={() => run(async () => {
+          <button className="btn small" data-tip="Обновить" disabled={busy || !library} onClick={() => run(async () => summary(await window.sketch.syncLibrary()))}>Обновить</button>
+          <button className="btn small" data-tip="Переименовать новые" disabled={busy || !library} onClick={() => run(async () => {
             const r = await window.sketch.renameNew();
             return `Переименовано ${r.renamed}` + (r.failed.length ? `, ошибок ${r.failed.length}` : '');
           })}>Переименовать</button>
-          <button className="btn small" data-tip="Сохранить оценки и пресеты в файл" disabled={busy} onClick={() => run(async () => {
+          <button className="btn small" data-tip="Экспорт в файл" disabled={busy} onClick={() => run(async () => {
             const p = await window.sketch.exportBackup(false);
             return p ? `Бэкап сохранён: ${p.split(/[\\/]/).pop()}` : null;
           })}>Бэкап</button>
-          <button className="btn small" data-tip="Загрузить оценки и пресеты из файла" disabled={busy} onClick={() => run(async () => {
+          <button className="btn small" data-tip="Импорт из файла" disabled={busy} onClick={() => run(async () => {
             const r = await window.sketch.importBackup();
             if (!r) return null;
             await reloadPresets();
@@ -56,11 +56,11 @@ export function Footer({ open, onToggle }: { open: boolean; onToggle: () => void
         </div>
       )}
       <div className="footer-row">
-        <button className={`icon-btn${open ? ' on' : ''}`} aria-label="Меню библиотеки" data-tip="Меню библиотеки" aria-expanded={open} onClick={onToggle}>
+        <button className={`icon-btn${open ? ' on' : ''}`} aria-label="Меню библиотеки" data-tip="Меню" aria-expanded={open} onClick={onToggle}>
           <Icon name="sliders" size={16} />
         </button>
         {open && <button className="lib-path" disabled={busy} aria-label={library ? 'Сменить папку библиотеки' : 'Выбрать папку библиотеки'}
-          data-tip={library ? 'Сменить папку библиотеки' : 'Выбрать папку библиотеки'} onClick={() => void connect()}>
+          data-tip={library ? 'Сменить папку' : 'Выбрать папку'} onClick={() => void connect()}>
           <Icon name="folder" size={13} />
           <span className="ellipsis">{library ?? 'Папка не выбрана'}</span>
         </button>}

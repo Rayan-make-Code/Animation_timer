@@ -73,7 +73,8 @@ button.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background
 .icon-btn { width: 28px; height: 28px; flex: none; border: 0; border-radius: 4px; background: transparent; color: var(--text-2); display: grid; place-items: center; padding: 0; }
 button.icon-btn:hover:not(:disabled) { color: var(--text); background: transparent; }
 .icon-btn.on { color: var(--text); }
-.icon-btn.boxed { width: 30px; height: 30px; align-self: center; }
+/* Изменить и удалить пресет — соразмерно кнопке «Старт». */
+.icon-btn.boxed { width: 44px; height: 44px; align-self: center; }
 .icon-btn.danger { color: var(--fix); }
 button.icon-btn.danger:hover:not(:disabled) { color: var(--fix); }
 
@@ -212,6 +213,11 @@ button.s-btn:hover:not(:disabled) { color: var(--text); background: transparent;
 /* Иконки без рамок: фокус с клавиатуры показывается цветом, а не квадратной обводкой. */
 .s-btn:focus-visible, .icon-btn:focus-visible { outline: none; color: var(--text); }
 .s-btn.dislike, button.s-btn.dislike:hover:not(:disabled) { color: var(--fix); }
+/* Нажатие лайка: сердце «бьётся»; дизлайка: палец кивает вниз. */
+.s-btn.like.bump svg { animation: like-pop .45s var(--hover-ease); }
+.s-btn.dislike.bump svg { animation: dislike-nod .45s var(--hover-ease); }
+@keyframes like-pop { 0% { transform: scale(1); } 35% { transform: scale(1.35); } 60% { transform: scale(.92); } 100% { transform: scale(1); } }
+@keyframes dislike-nod { 0% { transform: none; } 35% { transform: translateY(4px) rotate(-12deg); } 65% { transform: translateY(-1px) rotate(4deg); } 100% { transform: none; } }
 /* Выход: стрелка → прорисовка двери и человечка → человечек уходит в дверь. */
 .exit-arrow, .exit-art { transition: opacity .15s; }
 .exit-art { opacity: 0; }
@@ -223,6 +229,6 @@ button.s-btn:hover:not(:disabled) { color: var(--text); background: transparent;
 @keyframes exit-draw { to { stroke-dashoffset: 0; } }
 @keyframes exit-walk { 0% { transform: none; opacity: 1; } 70% { opacity: 1; } 100% { transform: translateX(7px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .session-progress-fill, .s-btn:hover .exit-draw, .s-btn:hover .exit-man { animation: none; }
+  .session-progress-fill, .s-btn:hover .exit-draw, .s-btn:hover .exit-man, .s-btn.bump svg { animation: none; }
   .s-btn:hover .exit-draw { stroke-dashoffset: 0; }
 }

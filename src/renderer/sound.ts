@@ -3,6 +3,15 @@ let ctx: AudioContext | null = null;
 
 /** Синус 880 Гц, 150 мс, плавное затухание. Ошибки звука не мешают сессии. */
 export function playChime(): void {
+  tone(880, 0.15, 0.15, 0);
+}
+
+/** Предупреждение за 5 секунд до конца интервала: тихий низкий тон с мягкой атакой, не резкий. */
+export function playWarning(): void {
+  tone(523, 0.07, 0.6, 0.04);
+}
+
+function tone(freq: number, volume: number, durSec: number, attackSec: number): void {
   try {
     ctx ??= new AudioContext();
     // Политика автозапуска может оставить контекст приостановленным.
@@ -11,12 +20,17 @@ export function playChime(): void {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.15, t);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+    osc.frequency.value = freq;
+    if (attackSec > 0) {
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(volume, t + attackSec);
+    } else {
+      gain.gain.setValueAtTime(volume, t);
+    }
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + durSec);
     osc.connect(gain).connect(ctx.destination);
     osc.start(t);
-    osc.stop(t + 0.15);
+    osc.stop(t + durSec);
   } catch {
     // Нет звукового устройства — молчим.
   }

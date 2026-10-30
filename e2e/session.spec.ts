@@ -31,8 +31,11 @@ async function prepare(durationSec: number, repeats: number, opts: { restSec?: n
   return { ...run, lib, startBounds };
 }
 
-/** Файлы «Позы» с пометкой дизлайка. */
-const marked = (lib: string) => fs.readdirSync(path.join(lib, 'Позы')).filter((n) => /_del\d*\./.test(n));
+/** Файлы с дизлайком: перенесены в папку trash с «_del» в имени. */
+const marked = (lib: string) => {
+  const trash = path.join(lib, 'trash');
+  return fs.existsSync(trash) ? fs.readdirSync(trash).filter((n) => /_del\d*\./.test(n)) : [];
+};
 
 const time = (win: Page) => win.locator('.session-time');
 const image = (win: Page) => win.locator('.stage-img');
@@ -83,13 +86,13 @@ test('L likes and pressing again removes the like', async () => {
   await app.close();
 });
 
-test('D marks the file with _del, keeps it on disk and shows the next image', async () => {
+test('D moves the file to trash with _del and shows the next image', async () => {
   const { app, win, dataDir, lib } = await prepare(60, 3);
   const first = await image(win).getAttribute('src');
   await win.keyboard.press('d');
   await expect(image(win)).not.toHaveAttribute('src', first!);
   expect(marked(lib)).toHaveLength(1);
-  expect(query<{ c: number }>(dataDir, "select count(*) as c from images where rating = -1 and file_name like '%\\_del%' escape '\\'")[0].c).toBe(1);
+  expect(query<{ c: number }>(dataDir, "select count(*) as c from images where rating = -1 and rel_path like 'trash/%\\_del%' escape '\\'")[0].c).toBe(1);
   await expect(win.getByRole('progressbar', { name: 'Прогресс сессии' })).toBeVisible();
   await app.close();
 });
@@ -120,11 +123,11 @@ test('D on the last image marks it and finishes the session', async () => {
 test('a failed rename shows an error and keeps the image', async () => {
   const { app, win, dataDir, lib } = await prepare(60, 3);
   const first = await image(win).getAttribute('src');
-  // Файл текущего изображения пропал с диска: переименовать его не получится.
+  // Файл текущего изображения пропал с диска: перенести его не получится.
   const rel = query<{ rel: string }>(dataDir, `select rel_path as rel from images where id = ${Number(first!.split('/').pop())}`)[0].rel;
   fs.rmSync(path.join(lib, ...rel.split('/')));
   await win.keyboard.press('d');
-  await expect(win.getByRole('alert')).toContainText('Не удалось пометить файл');
+  await expect(win.getByRole('alert')).toContainText('Не удалось перенести файл в trash');
   await expect(image(win)).toHaveAttribute('src', first!);
   expect(query<{ c: number }>(dataDir, 'select count(*) as c from images where rating = -1')[0].c).toBe(0);
   await expect(win.getByRole('alert')).toHaveCount(0, { timeout: 8_000 });

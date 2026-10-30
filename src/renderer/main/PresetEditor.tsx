@@ -47,15 +47,20 @@ function MmssInput({ value, label, onChange }: { value: number; label: string; o
   useEffect(() => {
     if (!Number.isNaN(value) && parseMmss(text) !== value) setText(mmss(value));
   }, [value]);
-  const bad = parseMmss(text) === null;
-  // Секунды, введённые цифрами («90»), при уходе из поля показываются как «1:30».
+  const bad = text !== '' && parseMmss(text) === null;
+  // При входе в поле старое значение стирается (видно подсказкой), ввод идёт с чистого поля.
+  const orig = useRef(value);
+  const clear = () => { orig.current = value; setText(''); };
+  // Секунды, введённые цифрами («90»), при уходе из поля показываются как «1:30»; пустое поле возвращает прежнее значение.
   const tidy = () => {
+    if (text === '') return setText(Number.isNaN(orig.current) ? '' : mmss(orig.current));
     const sec = parseMmss(text);
     if (sec !== null) setText(mmss(sec));
   };
   return (
     <input className={`mmss${bad ? ' bad' : ''}`} aria-label={label} aria-invalid={bad} value={text} inputMode="numeric"
-      onBlur={tidy} onChange={(e) => { setText(e.target.value); onChange(parseMmss(e.target.value) ?? NaN); }} />
+      placeholder={Number.isNaN(value) ? '' : mmss(value)}
+      onFocus={clear} onBlur={tidy} onChange={(e) => { setText(e.target.value); onChange(e.target.value === '' ? orig.current : parseMmss(e.target.value) ?? NaN); }} />
   );
 }
 
@@ -126,7 +131,7 @@ export const PresetEditor = forwardRef<EditorHandle, {
   return (
     <section className="editor swap" aria-label="Редактирование пресета" onBlur={onBlur}>
       <div className="ed-head">
-        <button className="icon-btn" aria-label="Назад к циферблату" data-tip="Назад к циферблату" onClick={onBack}><Icon name="back" size={16} /></button>
+        <button className="icon-btn" aria-label="Назад к циферблату" data-tip="Назад" onClick={onBack}><Icon name="back" size={16} /></button>
       </div>
       <div className="ed-fields rise" style={rise(0)}>
         <label>Название<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
@@ -140,11 +145,11 @@ export const PresetEditor = forwardRef<EditorHandle, {
       </div>
       <div className="ed-tools rise" style={rise(2)} role="toolbar" aria-label="Этапы">
         <span className="ed-title">Этапы</span>
-        <button className="icon-btn" aria-label="Добавить этап" data-tip="Добавить этап" onClick={() => setGroups(addGroup(groups), groups.length)}><Icon name="plus" /></button>
-        <button className="icon-btn" aria-label="Дублировать этап" data-tip="Дублировать этап" disabled={sel === 0} onClick={() => setGroups(duplicateGroup(groups, sel), sel + 1)}><Icon name="copy" /></button>
-        <button className="icon-btn" aria-label="Переставить этап вверх" data-tip="Переставить этап вверх" disabled={sel <= 1} onClick={() => setGroups(moveGroupUp(groups, sel), sel - 1)}><Icon name="up" /></button>
-        <button className="icon-btn" aria-label="Удалить этап" data-tip="Удалить этап" disabled={sel === 0 || groups.length <= 1} onClick={() => setGroups(removeGroup(groups, sel), sel)}><Icon name="trash" /></button>
-        <button className="icon-btn ed-save" aria-label="Сохранить пресет" data-tip="Сохранить пресет" disabled={errors.length > 0} onClick={() => void persist(draft)}><Icon name="save" /></button>
+        <button className="icon-btn" aria-label="Добавить этап" data-tip="Добавить" onClick={() => setGroups(addGroup(groups), groups.length)}><Icon name="plus" /></button>
+        <button className="icon-btn" aria-label="Дублировать этап" data-tip="Дублировать" disabled={sel === 0} onClick={() => setGroups(duplicateGroup(groups, sel), sel + 1)}><Icon name="copy" /></button>
+        <button className="icon-btn" aria-label="Переставить этап вверх" data-tip="Выше" disabled={sel <= 1} onClick={() => setGroups(moveGroupUp(groups, sel), sel - 1)}><Icon name="up" /></button>
+        <button className="icon-btn" aria-label="Удалить этап" data-tip="Удалить" disabled={sel === 0 || groups.length <= 1} onClick={() => setGroups(removeGroup(groups, sel), sel)}><Icon name="trash" /></button>
+        <button className="icon-btn ed-save" aria-label="Сохранить пресет" data-tip="Сохранить" disabled={errors.length > 0} onClick={() => void persist(draft)}><Icon name="save" /></button>
       </div>
       {groups.map((g, i) => {
         const n = i + 1;
