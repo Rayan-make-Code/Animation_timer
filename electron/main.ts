@@ -12,7 +12,7 @@ import { renameNewImages } from '../src/core/rename';
 import { seedDefaultPresets } from '../src/core/defaults';
 import { getSetting, readSettings, setSetting } from '../src/core/settings';
 import { insideRoot } from '../src/core/paths';
-import { dislikeImage } from '../src/core/dislike';
+import { dislikeImage, trashMarked } from '../src/core/dislike';
 import { assertWritable, resolveDataDir } from './paths';
 
 const APP_NAME = 'MIYP Timer';
@@ -38,10 +38,12 @@ function requireRoot(): string {
   return root;
 }
 
-async function syncAndRename(root: string) {
+/** withTrash: сначала перенести в trash файлы с пометкой «_del» (кнопка «Обновить»). */
+async function syncAndRename(root: string, withTrash = false) {
+  const trash = withTrash ? await trashMarked(db, root) : { moved: 0, failed: [] };
   const sync = await syncLibrary(db, root);
   const rename = await renameNewImages(db, root);
-  return { sync, rename };
+  return { sync, rename, trash };
 }
 
 const WIN_WIDTH = 406;
@@ -100,7 +102,7 @@ function registerIpc() {
     setSetting(db, 'library', root);
     return syncAndRename(root);
   });
-  handle('library:sync', () => syncAndRename(requireRoot()));
+  handle('library:sync', () => syncAndRename(requireRoot(), true));
   handle('library:rename', () => renameNewImages(db, requireRoot()));
   handle('library:tree', () => listTree(db));
   handle('rating:toggle', (id: number, t: 1 | -1) => toggleRating(db, id, t));
