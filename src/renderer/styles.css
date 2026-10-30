@@ -51,10 +51,11 @@ button { cursor: pointer; }
 @keyframes slideIn { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
 .slide { animation: slideIn .32s var(--hover-ease) both; }
 .rise { animation: slideIn .36s var(--hover-ease) both; }
-@keyframes flipIn { from { opacity: 0; transform: perspective(900px) rotateY(90deg); } to { opacity: 1; transform: perspective(900px) rotateY(0); } }
-.flip { animation: flipIn .5s var(--hover-ease) both; }
+/* Смена редактора и циферблата: мягкое проявление с лёгким приближением и расфокусом, без поворота. */
+@keyframes swapIn { from { opacity: 0; transform: scale(.97); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+.swap { animation: swapIn .34s var(--hover-ease) both; }
 @media (prefers-reduced-motion: reduce) {
-  .slide, .rise, .flip { animation: none; }
+  .slide, .rise, .swap { animation: none; }
 }
 
 /* Кнопки */

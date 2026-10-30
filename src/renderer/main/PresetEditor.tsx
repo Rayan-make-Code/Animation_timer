@@ -109,7 +109,7 @@ export const PresetEditor = forwardRef<EditorHandle, {
   };
 
   return (
-    <section className="editor flip" aria-label="Редактирование пресета" onBlur={onBlur}>
+    <section className="editor swap" aria-label="Редактирование пресета" onBlur={onBlur}>
       <div className="ed-fields rise" style={rise(0)}>
         <label>Название<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
         <label className="wide">Описание<input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} /></label>
