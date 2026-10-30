@@ -13,6 +13,32 @@ test('first run shows three default presets and opens the editor on click', asyn
   await app.close();
 });
 
+test('during the first run the library panel is open by default', async () => {
+  const { app, win } = await launch();
+  await expect(win.getByRole('toolbar', { name: 'Библиотека' })).toBeVisible();
+  await app.close();
+});
+
+test('after the first session start the panel is hidden and a preset click shows the dial', async () => {
+  const first = await launch(undefined, makeLibrary());
+  await first.win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
+  await first.win.getByRole('group', { name: 'Категории' }).getByRole('button', { name: 'Позы', exact: true }).click();
+  await first.win.getByRole('button', { name: 'Старт', exact: true }).click();
+  await expect(first.win.getByRole('progressbar', { name: 'Прогресс сессии' })).toBeVisible();
+  await expect.poll(() => query<{ value: string }>(first.dataDir, "select value from settings where key = 'firstRunDone'")[0]?.value).toBe('1');
+  await first.win.keyboard.press('Escape');
+  await expect(first.win.getByRole('button', { name: 'Старт', exact: true })).toBeVisible();
+  await first.app.close();
+
+  const { app, win } = await launch(first.dataDir);
+  await expect(win.getByRole('button', { name: /^Жесты 20/ })).toBeVisible();
+  await expect(win.getByRole('toolbar', { name: 'Библиотека' })).toHaveCount(0);
+  await win.getByRole('button', { name: /^Жесты 20/ }).click();
+  await expect(win.getByRole('region', { name: 'Циферблат пресета' })).toBeVisible();
+  await expect(win.getByRole('textbox', { name: 'Название' })).toHaveCount(0);
+  await app.close();
+});
+
 test('connecting a library shows category tags, all off', async () => {
   const lib = makeLibrary();
   const { app, win } = await launch(undefined, lib);

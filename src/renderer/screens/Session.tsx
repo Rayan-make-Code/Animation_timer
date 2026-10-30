@@ -1,15 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { imageUrl } from '../../shared/api';
 import { expandPreset, SessionMachine } from '../../core/timer';
-import { mmss } from '../components';
+import { mmss } from '../../core/dial';
+import { BackIcon, ExitIcon, ForwardIcon, HeartIcon, PauseIcon, PlayIcon, UrnIcon } from '../icons';
+import { playChime } from '../sound';
 import { errorText, useStore } from '../store';
 
+/** Сколько висит строка ошибки над панелью, мс. */
+const ERROR_MS = 4000;
+
+/** Полноэкранная сессия: изображение, полоса прогресса, «шторка» со временем и панель кнопок. */
 export function Session() {
-  const { session, setSession, setNotice } = useStore();
+  const { session, setSession, setFinishedSummary } = useStore();
   const { preset, queue } = session!;
   const [, force] = useState(0);
-  const [confirmExit, setConfirmExit] = useState(false);
   const [ratings, setRatings] = useState<Record<number, -1 | 0 | 1>>({});
+  const [error, setError] = useState<string | null>(null);
+  const leaving = useRef(false);
+  const trashing = useRef(false);
 
   const machine = useRef<SessionMachine<Promise<number>>>();
   if (!machine.current) {
@@ -21,108 +29,130 @@ export function Session() {
   const m = machine.current;
   const rerender = useCallback(() => force((n) => n + 1), []);
 
+  /** Возврат на главный экран; итог показывается только при естественном окончании. */
+  const leave = useCallback(async (summary: boolean) => {
+    if (leaving.current) return;
+    leaving.current = true;
+    if (summary) setFinishedSummary(`Сессия завершена: ${m.progress.done} рис.`);
+    try {
+      await window.sketch.setFullscreen(false);
+    } finally {
+      setSession(null);
+    }
+  }, [m, setSession, setFinishedSummary]);
+
   useEffect(() => {
     let last = performance.now();
     const timer = setInterval(() => {
       const now = performance.now();
-      m.tick(now - last);
+      if (m.tick(now - last) > 0) playChime();
       last = now;
       rerender();
     }, 100);
     return () => clearInterval(timer);
   }, [m, rerender]);
 
-  const leave = useCallback(async () => {
-    await window.sketch.setFullscreen(false);
-    setSession(null);
-  }, [setSession]);
+  const finished = m.state === 'finished';
+  useEffect(() => {
+    if (finished) void leave(true);
+  }, [finished, leave]);
 
-  const rate = useCallback(async (target: 1 | -1) => {
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(null), ERROR_MS);
+    return () => clearTimeout(t);
+  }, [error]);
+
+  const like = useCallback(async () => {
     const id = m.currentImage.image.id;
     try {
-      const next = await window.sketch.toggleRating(id, target);
+      const next = await window.sketch.toggleRating(id, 1);
       setRatings((r) => ({ ...r, [id]: next }));
     } catch (e) {
-      setNotice(errorText(e));
+      setError(errorText(e));
     }
-  }, [m, setNotice]);
+  }, [m]);
+
+  /** Дизлайк: файл в корзину и сразу следующее изображение; при ошибке остаёмся на месте. */
+  const dislike = useCallback(async () => {
+    if (trashing.current) return;
+    trashing.current = true;
+    const id = m.currentImage.image.id;
+    try {
+      await window.sketch.trashImage(id);
+      // Пока файл переносился, шаг мог смениться сам.
+      if (m.currentImage.image.id === id) m.next();
+      rerender();
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      trashing.current = false;
+    }
+  }, [m, rerender]);
+
+  const togglePause = useCallback(() => {
+    if (m.state === 'paused') m.resume();
+    else m.pause();
+    rerender();
+  }, [m, rerender]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (confirmExit) {
-        if (e.key === 'Escape') setConfirmExit(false);
-        return;
-      }
       if (m.state === 'finished') return;
       const act: Record<string, () => void> = {
-        ' ': () => (m.state === 'paused' ? m.resume() : m.pause()),
-        ArrowRight: () => m.next(),
-        ArrowLeft: () => m.prev(),
-        l: () => void rate(1),
-        d: () => void rate(-1),
-        Escape: () => setConfirmExit(true),
+        ' ': togglePause,
+        ArrowRight: () => { m.next(); rerender(); },
+        ArrowLeft: () => { m.prev(); rerender(); },
+        l: () => void like(),
+        d: () => void dislike(),
+        Escape: () => void leave(false),
       };
       const fn = act[e.key.length === 1 ? e.key.toLowerCase() : e.key];
       if (fn) {
         e.preventDefault();
         fn();
-        rerender();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [m, rate, rerender, confirmExit]);
+  }, [m, like, dislike, leave, togglePause, rerender]);
 
   const { done, total } = m.progress;
-  const finished = m.state === 'finished';
   const image = m.currentImage.image;
-  const rating = ratings[image.id] ?? image.rating;
-  const resting = m.step.kind === 'rest';
+  const liked = (ratings[image.id] ?? image.rating) === 1;
+  const phase = m.step.kind;
+  const paused = m.state === 'paused';
 
   return (
     <div className="session">
-      <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done} aria-label="Прогресс сессии">
-        <div className="progress-fill" style={{ width: `${total ? (done / total) * 100 : 0}%` }} />
+      <img
+        key={image.id}
+        className={`stage-img${phase === 'rest' ? ' dim' : ''}`}
+        src={imageUrl(image.id)}
+        alt={image.fileName}
+        onError={() => { m.next(); rerender(); }}
+      />
+      <div className="session-progress" role="progressbar" aria-label="Прогресс сессии" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
+        <div className="session-progress-fill" style={{ width: `${total ? (done / total) * 100 : 0}%` }} />
       </div>
-      <div className="stage">
-        <img
-          key={image.id}
-          className={`stage-img${resting ? ' dim' : ''}`}
-          src={imageUrl(image.id)}
-          alt={image.fileName}
-          onError={() => { m.next(); rerender(); }}
-        />
+      <div className="session-strip">
+        <span className={`phase-dot ${phase}`} aria-hidden="true" />
+        <span className="session-time">{mmss(Math.ceil(m.remainingMs / 1000))}</span>
+        <span className="session-count">{done}/{total}</span>
       </div>
-      <aside className="side">
-        {finished ? (
-          <div className="done-box">
-            <h2>Сессия завершена</h2>
-            <p className="muted">Просмотрено: {done} из {total}</p>
-            <button className="primary" onClick={leave}>Закрыть</button>
-          </div>
-        ) : (
-          <>
-            <div className={`timer${resting ? ' rest' : ''}`} aria-live="off">{mmss(Math.ceil(m.remainingMs / 1000))}</div>
-            <div className="step-label">{m.step.label}</div>
-            <div className="muted small">{done} / {total}{m.state === 'paused' ? ' · пауза' : ''}</div>
-            <div className="controls">
-              <button onClick={() => { m.state === 'paused' ? m.resume() : m.pause(); rerender(); }}>{m.state === 'paused' ? 'Продолжить' : 'Пауза'}</button>
-              <button onClick={() => { m.prev(); rerender(); }} aria-label="Предыдущее">←</button>
-              <button onClick={() => { m.next(); rerender(); }} aria-label="Следующее">→</button>
-              <button className={rating === 1 ? 'like on' : 'like'} aria-pressed={rating === 1} onClick={() => rate(1)}>Лайк</button>
-              <button className={rating === -1 ? 'dislike on' : 'dislike'} aria-pressed={rating === -1} onClick={() => rate(-1)}>Дизлайк</button>
-              <button onClick={() => setConfirmExit(true)}>Завершить</button>
-            </div>
-          </>
-        )}
-        {confirmExit && (
-          <div role="dialog" aria-label="Завершить сессию?" className="confirm">
-            <p>Завершить сессию?</p>
-            <button className="primary" onClick={leave}>Завершить</button>
-            <button onClick={() => setConfirmExit(false)}>Продолжить</button>
-          </div>
-        )}
-      </aside>
+      <div className="session-dock">
+        {error && <div className="session-error" role="alert">{error}</div>}
+        <div className="session-tools" role="toolbar" aria-label="Управление сессией">
+          <button className="s-btn" aria-label="Предыдущее изображение" data-tip="Назад (←)" onClick={() => { m.prev(); rerender(); }}><BackIcon /></button>
+          <button className="s-btn main" aria-label={paused ? 'Продолжить' : 'Пауза'} data-tip={paused ? 'Продолжить (Пробел)' : 'Пауза (Пробел)'} onClick={togglePause}>
+            {paused ? <PlayIcon /> : <PauseIcon />}
+          </button>
+          <button className="s-btn" aria-label="Следующее изображение" data-tip="Вперёд (→)" onClick={() => { m.next(); rerender(); }}><ForwardIcon /></button>
+          <button className={`s-btn like${liked ? ' on' : ''}`} aria-label="Лайк" aria-pressed={liked} data-tip="Лайк (L)" onClick={() => void like()}><HeartIcon filled={liked} /></button>
+          <button className="s-btn dislike" aria-label="Дизлайк: переместить в корзину" data-tip="Дизлайк: в корзину (D)" onClick={() => void dislike()}><UrnIcon /></button>
+          <button className="s-btn" aria-label="Выйти из сессии" data-tip="Выйти (Esc)" onClick={() => void leave(false)}><ExitIcon /></button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -168,19 +168,26 @@ button.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background
 .lib-path { flex: 1; min-width: 0; height: 26px; display: flex; align-items: center; gap: 6px; padding: 0 6px; border: 0; border-radius: 6px; background: transparent; color: var(--text-2); font-size: 11.5px; text-align: left; }
 .lib-path svg { flex: none; color: var(--text-3); }
 
-/* Сессия (оформление обновится в задаче 8) */
-.session { position: fixed; inset: 0; display: grid; grid-template-columns: 1fr 280px; grid-template-rows: 6px 1fr; background: #000; }
-.progress { grid-column: 1 / -1; background: var(--panel); }
-.progress-fill { height: 100%; background: var(--accent); transition: width .3s var(--hover-ease); }
-.stage { display: grid; min-width: 0; min-height: 0; background: #0b0b0e; }
-.stage-img { width: 100%; height: 100%; object-fit: contain; transition: opacity .3s; }
+/* Сессия: изображение на весь экран, полоса прогресса, «шторка» и панель кнопок */
+.session { position: fixed; inset: 0; overflow: hidden; background: #0c0d10; }
+.stage-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity .3s; }
 .stage-img.dim { opacity: .35; }
-.side { position: relative; background: var(--panel); border-left: 1px solid var(--line); padding: 20px 16px; display: flex; flex-direction: column; gap: 10px; }
-.timer { font-size: 56px; font-weight: 700; color: var(--work); font-variant-numeric: tabular-nums; line-height: 1; }
-.timer.rest { color: var(--review); }
-.step-label { font-size: 15px; }
-.controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-.controls button:first-child, .controls button:last-child { grid-column: 1 / -1; }
-.like.on { border-color: var(--done-line); background: var(--done-bg); color: var(--done); }
-.dislike.on { border-color: var(--fix-line); background: var(--fix-bg); color: var(--fix); }
-.confirm, .done-box { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--raise); border: 1px solid var(--line-2); border-radius: 10px; }
+.session-progress { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: rgba(43, 44, 52, .85); }
+.session-progress-fill { height: 100%; background: var(--work); transition: width .3s var(--hover-ease); }
+.session-strip { position: absolute; top: 3px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 4px 14px 6px; background: rgba(26, 27, 32, .78); border: 1px solid rgba(42, 43, 50, .9); border-top: 0; border-radius: 0 0 8px 8px; font-size: 12.5px; color: var(--text-3); }
+.phase-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--work); }
+.phase-dot.rest { background: var(--done); }
+.phase-dot.prepare { background: var(--prepare); }
+.session-time { font-family: var(--digits); font-weight: 200; font-size: 19px; font-variant-numeric: tabular-nums; color: var(--text-2); }
+.session-count { font-variant-numeric: tabular-nums; }
+.session-dock { position: absolute; right: 16px; bottom: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.session-error { max-width: 360px; padding: 4px 9px; border: 1px solid var(--fix-line); background: rgba(48, 26, 28, .92); color: var(--fix); border-radius: 6px; font-size: 12.5px; }
+.session-tools { display: flex; gap: 2px; padding: 3px; background: rgba(26, 27, 32, .92); border: 1px solid var(--line-2); border-radius: 8px; }
+.s-btn { width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--text-2); }
+.s-btn:hover:not(:disabled) { color: var(--text); }
+.s-btn.main { background: #eceef4; color: #15161b; }
+button.s-btn.main:hover:not(:disabled) { background: #fff; color: #15161b; }
+.s-btn.like { color: var(--done); }
+.s-btn.like.on { background: var(--done-bg); }
+button.s-btn.like:hover:not(:disabled) { color: var(--done); }
+.s-btn.dislike, button.s-btn.dislike:hover:not(:disabled) { color: var(--fix); }
