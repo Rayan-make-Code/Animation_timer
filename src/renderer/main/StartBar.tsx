@@ -7,7 +7,13 @@ import { Icon, PlayIcon } from '../components';
 import { errorText, useStore } from '../store';
 
 /** Блок «Старт»: сумма, правка и удаление пресета, запуск сессии. */
-export function StartBar({ preset, onEdit, onDelete }: { preset: Preset | null; onEdit: () => void; onDelete: () => Promise<void> }) {
+export function StartBar({ preset, onEdit, onDelete, beforeStart }: {
+  preset: Preset | null;
+  onEdit: () => void;
+  onDelete: () => Promise<void>;
+  /** Сохраняет открытый редактор; false — сохранить не удалось, старт отменяется. */
+  beforeStart: () => Promise<boolean>;
+}) {
   const { library, tree, session, setSession, setNotice, firstRun, finishFirstRun, finishedSummary, setFinishedSummary } = useStore();
   // В наборе категорий каждого рабочего шага должны быть изображения; пустой набор блокирует старт.
   const [emptyPool, setEmptyPool] = useState(false);
@@ -38,15 +44,21 @@ export function StartBar({ preset, onEdit, onDelete }: { preset: Preset | null; 
       : hasEmptySet ? 'Выберите категории для пресета или отдельного этапа'
         : emptyPool ? 'В выбранных категориях нет изображений' : null;
 
+  // Одно нажатие: сначала сохраняем открытый редактор, затем берём пресет из базы — с только что выбранными категориями.
   const start = async () => {
-    if (blocked || !preset || starting.current) return;
+    if (!library || !preset || starting.current) return;
     starting.current = true;
     try {
-      const queue = await window.sketch.buildQueue(slots);
+      if (!(await beforeStart())) return;
+      const fresh = (await window.sketch.listPresets()).find((p) => p.id === preset.id);
+      if (!fresh) return;
+      const freshSlots = expandPreset(fresh).filter((s) => s.kind === 'work').map((s) => s.categoryIds);
+      if (freshSlots.some((ids) => ids.length === 0)) return setNotice('Выберите категории для пресета или отдельного этапа');
+      const queue = await window.sketch.buildQueue(freshSlots);
       if (firstRun) finishFirstRun();
       setFinishedSummary(null);
       await window.sketch.setFullscreen(true);
-      setSession({ preset, queue });
+      setSession({ preset: fresh, queue });
     } catch (e) {
       setNotice(errorText(e));
     } finally {
@@ -74,8 +86,8 @@ export function StartBar({ preset, onEdit, onDelete }: { preset: Preset | null; 
               <button className="icon-btn boxed danger" aria-label="Удалить пресет" data-tip="Удалить пресет" onClick={() => setConfirmDelete(true)}><Icon name="trash" /></button>
             </>
           )}
-          <button className="icon-btn boxed start-btn" aria-label="Старт" aria-disabled={blocked ? true : undefined} data-tip={blocked ?? 'Старт'} onClick={() => void start()}>
-            <PlayIcon />
+          <button className="icon-btn start-btn" aria-label="Старт" aria-disabled={blocked ? true : undefined} data-tip={blocked ?? 'Старт'} onClick={() => void start()}>
+            <PlayIcon size={34} />
           </button>
         </>
       )}

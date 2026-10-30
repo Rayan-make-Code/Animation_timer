@@ -12,8 +12,8 @@ export function PauseIcon() {
   return <svg width="22.5" height="22.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>;
 }
 
-export function PlayIcon() {
-  return <svg width="22.5" height="22.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" /></svg>;
+export function PlayIcon({ size = 22.5 }: { size?: number }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" /></svg>;
 }
 
 /** Сердце: залито, когда лайк стоит. */

@@ -139,20 +139,24 @@ export function Session() {
 
   return (
     <div className="session">
-      <img
-        key={image.id}
-        className={`stage-img${phase === 'rest' ? ' dim' : ''}`}
-        src={imageUrl(image.id)}
-        alt={image.fileName}
-        onError={() => go('next')}
-      />
-      <div className="session-progress" role="progressbar" aria-label="Прогресс сессии" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
-        <div className="session-progress-fill" style={{ width: `${total ? (done / total) * 100 : 0}%` }} />
-      </div>
-      <div className="session-strip">
-        <span className={`phase-dot ${phase}`} aria-hidden="true" />
-        <span className="session-time">{mmss(Math.ceil(m.remainingMs / 1000))}</span>
-        <span className="session-count">{done}/{total}</span>
+      <header className="session-head">
+        <div className="session-progress" role="progressbar" aria-label="Прогресс сессии" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
+          <div className="session-progress-fill" style={{ width: `${total ? (done / total) * 100 : 0}%` }} />
+        </div>
+        <div className="session-strip">
+          <span className={`phase-dot ${phase}`} aria-hidden="true" />
+          <span className="session-count">{done}/{total}</span>
+          <span className="session-time">{mmss(Math.ceil(m.remainingMs / 1000))}</span>
+        </div>
+      </header>
+      <div className="stage">
+        <img
+          key={image.id}
+          className={`stage-img${phase === 'rest' ? ' dim' : ''}`}
+          src={imageUrl(image.id)}
+          alt={image.fileName}
+          onError={() => go('next')}
+        />
       </div>
       <div className="session-dock">
         {error && <div className="session-error" role="alert">{error}</div>}

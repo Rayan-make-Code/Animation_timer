@@ -12,6 +12,7 @@ const PATHS = {
   sliders: <><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></>,
   folder: <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z" />,
   clock: <><circle cx="12" cy="12" r="10" /><path d="M12 6.5V12l4 2.5" /></>,
+  back: <path d="M15 5l-7 7 7 7" />,
   save: <><path d="M5 4h11l3 3v13H5z" /><path d="M8 4v5h7V4" /><path d="M8 20v-6h8v6" /></>,
 } satisfies Record<string, ReactNode>;
 
@@ -25,8 +26,8 @@ export function Icon({ name, size = 15, stroke = 1.8 }: { name: IconName; size?:
   );
 }
 
-export function PlayIcon() {
-  return <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" /></svg>;
+export function PlayIcon({ size = 12 }: { size?: number }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" /></svg>;
 }
 
 interface Tip { text: string; x: number; y: number; below: boolean }

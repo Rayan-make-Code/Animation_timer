@@ -82,11 +82,11 @@ export function query<T>(dataDir: string, sql: string): T[] {
   }
 }
 
-/** Выбирает категорию для всего пресета в редакторе, сохраняет дискетой и возвращает циферблат. */
+/** Выбирает категорию для всего пресета в редакторе, сохраняет дискетой и возвращается стрелкой «назад». */
 export async function choosePresetCategory(win: Page, preset: RegExp, category: string): Promise<void> {
   await win.getByRole('button', { name: preset }).click();
   await win.getByRole('group', { name: 'Категории пресета' }).getByRole('button', { name: category, exact: true }).click();
   await win.getByRole('button', { name: 'Сохранить пресет' }).click();
-  await win.locator('.start-text').click();
+  await win.getByRole('button', { name: 'Назад к циферблату' }).click();
   await expect(win.getByRole('region', { name: 'Циферблат пресета' })).toBeVisible();
 }
