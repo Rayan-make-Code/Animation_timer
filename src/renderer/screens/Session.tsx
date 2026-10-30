@@ -166,7 +166,7 @@ export function Session() {
             {paused ? <PlayIcon /> : <PauseIcon />}
           </button>
           <button className="s-btn" aria-label="Следующее изображение" data-tip="Вперёд (→)" onClick={() => go('next')}><ForwardIcon /></button>
-          <button className={`s-btn like${liked ? ' on' : ''}`} aria-label="Лайк" aria-pressed={liked} data-tip="Лайк (L)" onClick={() => void like()}><HeartIcon filled={liked} /></button>
+          <button className={`s-btn like${liked ? ' on' : ''}`} aria-label="Лайк" aria-pressed={liked} data-tip="Лайк (L)" onClick={() => void like()}><HeartIcon /></button>
           <button className="s-btn dislike" aria-label="Дизлайк: убрать из сессий" data-tip="Дизлайк: пометить файл _del (D)" onClick={() => void dislike()}><UrnIcon /></button>
           <button className="s-btn" aria-label="Выйти из сессии" data-tip="Выйти (Esc)" onClick={() => void leave(false)}><ExitIcon /></button>
         </div>

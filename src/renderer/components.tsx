@@ -27,7 +27,7 @@ export function Icon({ name, size = 15, stroke = 1.8 }: { name: IconName; size?:
 }
 
 export function PlayIcon({ size = 12 }: { size?: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" /></svg>;
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" /></svg>;
 }
 
 interface Tip { text: string; x: number; y: number; below: boolean }

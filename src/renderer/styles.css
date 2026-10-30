@@ -69,11 +69,11 @@ button.primary { background: var(--accent-dim); border-color: var(--accent); col
 button.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background: #fff; }
 .btn-danger { border-color: var(--fix-line); color: var(--fix); }
 .icon-btn { width: 28px; height: 28px; flex: none; border: 0; border-radius: 4px; background: transparent; color: var(--text-2); display: grid; place-items: center; padding: 0; }
-.icon-btn:hover:not(:disabled) { color: var(--text); }
-.icon-btn.on { background: var(--raise); }
-.icon-btn.boxed { width: 30px; height: 30px; align-self: center; border: 1px solid var(--line-2); background: var(--panel-2); }
-.icon-btn.danger { border-color: var(--fix-line); color: var(--fix); background: transparent; }
-.icon-btn.danger:hover { color: var(--fix); background: var(--fix-bg); }
+button.icon-btn:hover:not(:disabled) { color: var(--text); background: transparent; }
+.icon-btn.on { color: var(--text); }
+.icon-btn.boxed { width: 30px; height: 30px; align-self: center; }
+.icon-btn.danger { color: var(--fix); }
+button.icon-btn.danger:hover:not(:disabled) { color: var(--fix); }
 
 /* Подсказки (data-tip) */
 .tip-layer { position: fixed; z-index: 100; transform: translateY(-100%); white-space: nowrap; background: var(--raise); border: 1px solid var(--line-2); color: var(--text); font-size: 12.5px; padding: 4px 8px; border-radius: 4px; pointer-events: none; }
@@ -202,8 +202,8 @@ button.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background
 .session-error { max-width: 360px; padding: 4px 9px; border: 1px solid var(--fix-line); background: rgba(48, 26, 28, .92); color: var(--fix); border-radius: 4px; font-size: 12.5px; }
 .session-tools { display: flex; gap: 6px; }
 .s-btn { width: 42px; height: 42px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6.5px; background: transparent; color: var(--text-2); }
-.s-btn:hover:not(:disabled) { color: var(--text); }
-.s-btn.like { color: var(--done); }
-.s-btn.like.on { background: var(--done-bg); }
-button.s-btn.like:hover:not(:disabled) { color: var(--done); }
+button.s-btn:hover:not(:disabled) { color: var(--text); background: transparent; }
+.s-btn.like.on, button.s-btn.like.on:hover:not(:disabled) { color: var(--done); }
+/* Иконки без рамок: фокус с клавиатуры показывается цветом, а не квадратной обводкой. */
+.s-btn:focus-visible, .icon-btn:focus-visible { outline: none; color: var(--text); }
 .s-btn.dislike, button.s-btn.dislike:hover:not(:disabled) { color: var(--fix); }
