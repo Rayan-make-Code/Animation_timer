@@ -116,6 +116,26 @@ test('Escape leaves immediately and returns to the main screen', async () => {
   await app.close();
 });
 
+test('keys pressed while leaving are ignored: Escape then D trashes nothing', async () => {
+  const { app, win, dataDir, trash } = await prepare(60, 3);
+  // Выход из полноэкранного режима затягивается, чтобы D пришла, пока сессия закрывается.
+  await app.evaluate(({ ipcMain, BrowserWindow }) => {
+    ipcMain.removeHandler('sketch:window:fullscreen');
+    ipcMain.handle('sketch:window:fullscreen', async (_e, on: boolean) => {
+      await new Promise((r) => setTimeout(r, 1500));
+      BrowserWindow.getAllWindows()[0].setFullScreen(on);
+    });
+  });
+  await win.keyboard.press('Escape');
+  await win.keyboard.press('d');
+  await win.keyboard.press('ArrowRight');
+  await expect(win.getByRole('button', { name: 'Старт', exact: true })).toBeVisible();
+  await win.waitForTimeout(500);
+  expect(fs.existsSync(trash) ? fs.readdirSync(trash) : []).toHaveLength(0);
+  expect(query<{ c: number }>(dataDir, 'select count(*) as c from images where missing = 1')[0].c).toBe(0);
+  await app.close();
+});
+
 test('progress strip shows remaining time and count', async () => {
   const { app, win } = await prepare(3, 2);
   await expect(time(win)).toHaveText(/^\d+:\d{2}$/);

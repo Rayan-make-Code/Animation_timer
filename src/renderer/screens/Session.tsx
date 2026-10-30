@@ -44,6 +44,8 @@ export function Session() {
   useEffect(() => {
     let last = performance.now();
     const timer = setInterval(() => {
+      // После выхода время больше не идёт: ни просмотров, ни сигнала.
+      if (leaving.current) return;
       const now = performance.now();
       if (m.tick(now - last) > 0) playChime();
       last = now;
@@ -64,6 +66,7 @@ export function Session() {
   }, [error]);
 
   const like = useCallback(async () => {
+    if (leaving.current) return;
     const id = m.currentImage.image.id;
     try {
       const next = await window.sketch.toggleRating(id, 1);
@@ -75,7 +78,7 @@ export function Session() {
 
   /** Дизлайк: файл в корзину и сразу следующее изображение; при ошибке остаёмся на месте. */
   const dislike = useCallback(async () => {
-    if (trashing.current) return;
+    if (trashing.current || leaving.current) return;
     trashing.current = true;
     const id = m.currentImage.image.id;
     try {
@@ -91,18 +94,27 @@ export function Session() {
   }, [m, rerender]);
 
   const togglePause = useCallback(() => {
+    if (leaving.current) return;
     if (m.state === 'paused') m.resume();
     else m.pause();
     rerender();
   }, [m, rerender]);
 
+  /** Навигация вручную: игнорируется, пока сессия закрывается. */
+  const go = useCallback((dir: 'next' | 'prev') => {
+    if (leaving.current) return;
+    if (dir === 'next') m.next();
+    else m.prev();
+    rerender();
+  }, [m, rerender]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (m.state === 'finished') return;
+      if (m.state === 'finished' || leaving.current) return;
       const act: Record<string, () => void> = {
         ' ': togglePause,
-        ArrowRight: () => { m.next(); rerender(); },
-        ArrowLeft: () => { m.prev(); rerender(); },
+        ArrowRight: () => go('next'),
+        ArrowLeft: () => go('prev'),
         l: () => void like(),
         d: () => void dislike(),
         Escape: () => void leave(false),
@@ -115,7 +127,7 @@ export function Session() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [m, like, dislike, leave, togglePause, rerender]);
+  }, [m, like, dislike, leave, togglePause, go]);
 
   const { done, total } = m.progress;
   const image = m.currentImage.image;
@@ -130,7 +142,7 @@ export function Session() {
         className={`stage-img${phase === 'rest' ? ' dim' : ''}`}
         src={imageUrl(image.id)}
         alt={image.fileName}
-        onError={() => { m.next(); rerender(); }}
+        onError={() => go('next')}
       />
       <div className="session-progress" role="progressbar" aria-label="Прогресс сессии" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
         <div className="session-progress-fill" style={{ width: `${total ? (done / total) * 100 : 0}%` }} />
@@ -143,11 +155,11 @@ export function Session() {
       <div className="session-dock">
         {error && <div className="session-error" role="alert">{error}</div>}
         <div className="session-tools" role="toolbar" aria-label="Управление сессией">
-          <button className="s-btn" aria-label="Предыдущее изображение" data-tip="Назад (←)" onClick={() => { m.prev(); rerender(); }}><BackIcon /></button>
+          <button className="s-btn" aria-label="Предыдущее изображение" data-tip="Назад (←)" onClick={() => go('prev')}><BackIcon /></button>
           <button className="s-btn main" aria-label={paused ? 'Продолжить' : 'Пауза'} data-tip={paused ? 'Продолжить (Пробел)' : 'Пауза (Пробел)'} onClick={togglePause}>
             {paused ? <PlayIcon /> : <PauseIcon />}
           </button>
-          <button className="s-btn" aria-label="Следующее изображение" data-tip="Вперёд (→)" onClick={() => { m.next(); rerender(); }}><ForwardIcon /></button>
+          <button className="s-btn" aria-label="Следующее изображение" data-tip="Вперёд (→)" onClick={() => go('next')}><ForwardIcon /></button>
           <button className={`s-btn like${liked ? ' on' : ''}`} aria-label="Лайк" aria-pressed={liked} data-tip="Лайк (L)" onClick={() => void like()}><HeartIcon filled={liked} /></button>
           <button className="s-btn dislike" aria-label="Дизлайк: переместить в корзину" data-tip="Дизлайк: в корзину (D)" onClick={() => void dislike()}><UrnIcon /></button>
           <button className="s-btn" aria-label="Выйти из сессии" data-tip="Выйти (Esc)" onClick={() => void leave(false)}><ExitIcon /></button>

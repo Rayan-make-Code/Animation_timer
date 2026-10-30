@@ -5,6 +5,8 @@ let ctx: AudioContext | null = null;
 export function playChime(): void {
   try {
     ctx ??= new AudioContext();
+    // Политика автозапуска может оставить контекст приостановленным.
+    if (ctx.state === 'suspended') void ctx.resume().catch(() => undefined);
     const t = ctx.currentTime;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
