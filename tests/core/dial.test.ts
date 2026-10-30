@@ -28,6 +28,6 @@ test('keeps 60 ticks for a 3 h preset with 1 s rests', () => {
 test('formats totals', () => {
   expect(formatTotal(35 * 60)).toBe('35 мин'); expect(formatTotal(80 * 60)).toBe('1 ч 20 мин');
   expect(formatTotal(30)).toBe('1 мин');     // rounds up, never «0 мин»
-  expect(formatClock(2235)).toBe('37m 15s'); expect(formatClock(3725)).toBe('1h 2m 05s');
+  expect(formatClock(2235)).toBe('37 мин 15 с'); expect(formatClock(3725)).toBe('1 ч 2 мин 05 с');
   expect(mmss(65)).toBe('1:05');
 });

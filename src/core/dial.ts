@@ -50,13 +50,13 @@ export function formatTotal(sec: number): string {
   return m === 0 ? `${h} ч` : `${h} ч ${m} мин`;
 }
 
-/** Остаток времени вида «1h 2m 05s» / «37m 15s». */
+/** Остаток времени вида «1 ч 2 мин 05 с» / «37 мин 15 с». */
 export function formatClock(sec: number): string {
   const s = Math.floor(sec);
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   const ss = String(s % 60).padStart(2, '0');
-  return h > 0 ? `${h}h ${m}m ${ss}s` : `${m}m ${ss}s`;
+  return h > 0 ? `${h} ч ${m} мин ${ss} с` : `${m} мин ${ss} с`;
 }
 
 export const mmss = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;

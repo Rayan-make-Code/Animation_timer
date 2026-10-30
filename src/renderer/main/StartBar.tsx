@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Preset } from '../../shared/api';
-import { formatClock, totalSec } from '../../core/dial';
 import { categoryKey } from '../../core/presetModel';
-import { expandPreset, totalWork } from '../../core/timer';
+import { expandPreset } from '../../core/timer';
 import { Icon, PlayIcon } from '../components';
 import { errorText, useStore } from '../store';
 
-/** Блок «Старт»: сумма, правка и удаление пресета, запуск сессии. */
+/** Кнопки под циферблатом: правка пресета слева, запуск в центре, удаление справа. */
 export function StartBar({ preset, onEdit, onDelete, beforeStart }: {
   preset: Preset | null;
   onEdit: () => void;
@@ -22,7 +21,6 @@ export function StartBar({ preset, onEdit, onDelete, beforeStart }: {
   const starting = useRef(false);
 
   const steps = preset ? expandPreset(preset) : [];
-  const count = totalWork(steps);
   // Категории каждого рабочего шага (в порядке очереди) и уникальные наборы для проверки.
   const slots = steps.filter((s) => s.kind === 'work').map((s) => s.categoryIds);
   const keys = [...new Set(slots.map(categoryKey))];
@@ -69,28 +67,21 @@ export function StartBar({ preset, onEdit, onDelete, beforeStart }: {
   return (
     <section className="start" aria-label="Старт">
       {confirmDelete && preset ? (
-        <>
-          <div className="start-text"><span className="start-main">Удалить пресет?</span><span className="start-sub">{preset.name}</span></div>
+        <div className="start-confirm">
+          <span className="start-main">Удалить «{preset.name}»?</span>
           <button className="btn btn-danger" onClick={() => { setConfirmDelete(false); void onDelete(); }}>Да</button>
           <button className="btn" onClick={() => setConfirmDelete(false)}>Нет</button>
-        </>
+        </div>
       ) : (
-        <>
-          <div className="start-text">
-            <span className="start-main">{preset ? `${formatClock(totalSec(steps))} · ${count} рис.` : 'Нет пресета'}</span>
-            {finishedSummary && <span className="start-sub done">{finishedSummary}</span>}
-          </div>
-          {preset && (
-            <>
-              <button className="icon-btn boxed" aria-label="Редактировать пресет" data-tip="Изменить" onClick={onEdit}><Icon name="edit" size={22} stroke={2} /></button>
-              <button className="icon-btn boxed danger" aria-label="Удалить пресет" data-tip="Удалить" onClick={() => setConfirmDelete(true)}><Icon name="trash" size={22} stroke={2} /></button>
-            </>
-          )}
+        <div className="start-actions">
+          {preset && <button className="icon-btn boxed" aria-label="Редактировать пресет" data-tip="Изменить" onClick={onEdit}><Icon name="edit" size={22} stroke={2} /></button>}
           <button className="icon-btn start-btn" aria-label="Старт" aria-disabled={blocked ? true : undefined} data-tip={blocked ?? 'Старт'} onClick={() => void start()}>
             <PlayIcon size={27} />
           </button>
-        </>
+          {preset && <button className="icon-btn boxed danger" aria-label="Удалить пресет" data-tip="Удалить" onClick={() => setConfirmDelete(true)}><Icon name="trash" size={22} stroke={2} /></button>}
+        </div>
       )}
+      {finishedSummary && <span className="start-sub done">{finishedSummary}</span>}
     </section>
   );
 }
