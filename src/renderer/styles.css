@@ -88,7 +88,9 @@ button.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background
 .window-controls button { width: 42px; height: 100%; border: 0; border-radius: 0; padding: 0; background: transparent; color: var(--text-2); }
 .window-controls button:hover { background: var(--raise); color: var(--text); }
 .window-controls .close:hover:not(:disabled) { background: #c42b1c; color: #fff; }
-.main { min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+.main { min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 10px; scrollbar-width: none; }
+/* Полоса вертикальной прокрутки скрыта; колесо мыши по-прежнему прокручивает. */
+.main::-webkit-scrollbar { display: none; }
 
 /* Пресеты */
 .preset-row { display: flex; gap: 6px; align-items: flex-start; overflow-x: auto; flex: none; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; padding-bottom: 4px; }
@@ -126,6 +128,7 @@ button.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background
 .ed-fields label { flex: 1; min-width: 0; }
 .ed-fields label.wide { flex: 1.5; }
 .ed-tools { display: flex; align-items: center; gap: 2px; padding: 3px 6px 3px 10px; border-bottom: 1px solid var(--line); }
+.ed-tools .ed-save { margin-left: auto; }
 .ed-title { flex: 1; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-2); }
 .ed-row { display: flex; align-items: stretch; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--line); border-left: 2px solid transparent; }
 .ed-row.selected { background: var(--face); border-left-color: var(--accent); }
@@ -166,7 +169,7 @@ button.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background
 .start-sub { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .start-sub.done { color: var(--done); }
 .start > .btn { align-self: center; }
-.start-btn { height: 32px; padding: 0 16px; }
+.start-btn { color: var(--work); }
 
 .notice { flex: none; display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 6px 6px 6px 10px; border: 1px solid var(--work-line); background: var(--work-bg); color: var(--work); border-radius: 8px; font-size: 12.5px; }
 .notice .icon-btn { color: var(--work); }
@@ -175,6 +178,7 @@ button.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background
 .footer { background: var(--panel); border-top: 1px solid var(--line); padding: 3px 8px; display: flex; flex-direction: column; gap: 4px; }
 .lib-panel { display: flex; gap: 4px; padding: 3px 0 5px; border-bottom: 1px solid var(--line); }
 .footer-row { display: flex; align-items: center; gap: 6px; }
+.footer.collapsed { background: transparent; border-top-color: transparent; }
 .lib-path { flex: 1; min-width: 0; height: 26px; display: flex; align-items: center; gap: 6px; padding: 0 6px; border: 0; border-radius: 6px; background: transparent; color: var(--text-2); font-size: 11.5px; text-align: left; }
 .lib-path svg { flex: none; color: var(--text-3); }
 
@@ -195,8 +199,6 @@ button.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background
 .session-tools { display: flex; gap: 6px; }
 .s-btn { width: 42px; height: 42px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--text-2); }
 .s-btn:hover:not(:disabled) { color: var(--text); }
-.s-btn.main { background: #eceef4; color: #15161b; }
-button.s-btn.main:hover:not(:disabled) { background: #fff; color: #15161b; }
 .s-btn.like { color: var(--done); }
 .s-btn.like.on { background: var(--done-bg); }
 button.s-btn.like:hover:not(:disabled) { color: var(--done); }

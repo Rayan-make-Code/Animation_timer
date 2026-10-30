@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, dialog, ipcMain, net, protocol } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, net, protocol } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -12,7 +12,7 @@ import { renameNewImages } from '../src/core/rename';
 import { seedDefaultPresets } from '../src/core/defaults';
 import { getSetting, readSettings, setSetting } from '../src/core/settings';
 import { insideRoot } from '../src/core/paths';
-import { trashImage } from '../src/core/trash';
+import { dislikeImage } from '../src/core/dislike';
 import { assertWritable, resolveDataDir } from './paths';
 
 const APP_NAME = 'MIYP Timer';
@@ -68,14 +68,6 @@ function setFullscreen(on: boolean) {
   }
 }
 
-/** Корзина: в тестах (SKETCH_FAKE_TRASH) файлы переносятся в указанную папку. */
-function trashFile(absPath: string): Promise<void> {
-  const fake = devEnv.SKETCH_FAKE_TRASH;
-  if (!fake) return shell.trashItem(absPath);
-  fs.mkdirSync(fake, { recursive: true });
-  return fs.promises.rename(absPath, path.join(fake, path.basename(absPath)));
-}
-
 function createWindow() {
   win = new BrowserWindow({
     width: 406,
@@ -120,7 +112,7 @@ function registerIpc() {
   handle('session:view', (id: number, cycle: number) => recordView(db, id, cycle));
   handle('session:unview', (viewId: number) => undoView(db, viewId));
   handle('session:cycle', (ids: number[]) => cycleStatus(db, ids));
-  handle('session:trash', (id: number) => trashImage(db, requireRoot(), id, trashFile));
+  handle('session:dislike', (id: number) => dislikeImage(db, requireRoot(), id));
   handle('settings:get', () => readSettings(db));
   handle('settings:save', (p: { selectedPreset?: number | null; firstRunDone?: boolean }) => {
     if (p.selectedPreset !== undefined) setSetting(db, 'selectedPreset', p.selectedPreset === null ? '' : String(p.selectedPreset));

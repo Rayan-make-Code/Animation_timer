@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Db } from './db';
+import { isDislikedName } from './dislike';
 import { isSupportedImage } from './formats';
 
 export interface SyncResult { addedImages: number; addedCategories: number; missing: number; restored: number }
@@ -62,14 +63,15 @@ export async function syncLibrary(db: Db, root: string): Promise<SyncResult> {
     for (const row of db.prepare('select id, rel_path, missing from images').all() as { id: number; rel_path: string; missing: number }[]) {
       known.set(row.rel_path, { id: row.id, missing: row.missing });
     }
-    const insertImg = db.prepare('insert into images(category_id, rel_path, file_name, size, mtime) values (?, ?, ?, ?, ?)');
+    const insertImg = db.prepare('insert into images(category_id, rel_path, file_name, size, mtime, rating) values (?, ?, ?, ?, ?, ?)');
     const restore = db.prepare('update images set missing = 0, size = ?, mtime = ? where id = ?');
     const seen = new Set<string>();
     for (const f of found) {
       seen.add(f.relPath);
       const k = known.get(f.relPath);
       if (!k) {
-        insertImg.run(catId.get(f.categoryRel)!, f.relPath, f.fileName, f.size, f.mtime);
+        // Файл с пометкой «_del» — дизлайк, сделанный раньше (например, до переустановки): в сессии он не попадает.
+        insertImg.run(catId.get(f.categoryRel)!, f.relPath, f.fileName, f.size, f.mtime, isDislikedName(f.fileName) ? -1 : 0);
         res.addedImages++;
       } else if (k.missing) {
         restore.run(f.size, f.mtime, k.id);

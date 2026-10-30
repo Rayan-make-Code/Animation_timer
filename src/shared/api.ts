@@ -36,8 +36,8 @@ export interface SketchApi {
   importBackup(): Promise<ImportReport | null>;
   /** Сколько картинок осталось в текущем круге и сколько всего. */
   cycleStatus(categoryIds: number[]): Promise<{ remaining: number; total: number }>;
-  /** Переносит файл изображения в корзину и убирает его из библиотеки. */
-  trashImage(imageId: number): Promise<void>;
+  /** Дизлайк: добавляет «_del» к имени файла и исключает изображение из сессий. */
+  dislikeImage(imageId: number): Promise<void>;
   getSettings(): Promise<Settings>;
   saveSettings(p: Partial<Settings>): Promise<void>;
   setFullscreen(on: boolean): Promise<void>;

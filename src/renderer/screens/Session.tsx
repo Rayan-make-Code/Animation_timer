@@ -17,7 +17,7 @@ export function Session() {
   const [ratings, setRatings] = useState<Record<number, -1 | 0 | 1>>({});
   const [error, setError] = useState<string | null>(null);
   const leaving = useRef(false);
-  const trashing = useRef(false);
+  const disliking = useRef(false);
 
   const machine = useRef<SessionMachine<Promise<number>>>();
   if (!machine.current) {
@@ -76,22 +76,22 @@ export function Session() {
     }
   }, [m]);
 
-  /** Дизлайк: файл в корзину и сразу следующее изображение; при ошибке остаёмся на месте. */
+  /** Дизлайк: к имени файла добавляется «_del», сразу следующее изображение; при ошибке остаёмся на месте. */
   const dislike = useCallback(async () => {
-    if (trashing.current || leaving.current) return;
-    trashing.current = true;
+    if (disliking.current || leaving.current) return;
+    disliking.current = true;
     const id = m.currentImage.image.id;
     try {
-      await window.sketch.trashImage(id);
-      // Файла больше нет: дальше по очереди это изображение заменяется другим.
+      await window.sketch.dislikeImage(id);
+      // Изображение выбыло из сессий: дальше по очереди его заменяет другое.
       m.replaceImage(id);
-      // Пока файл переносился, шаг мог смениться сам.
+      // Пока файл переименовывался, шаг мог смениться сам.
       if (m.currentImage.image.id === id) m.next();
       rerender();
     } catch (e) {
       setError(errorText(e));
     } finally {
-      trashing.current = false;
+      disliking.current = false;
     }
   }, [m, rerender]);
 
@@ -163,7 +163,7 @@ export function Session() {
           </button>
           <button className="s-btn" aria-label="Следующее изображение" data-tip="Вперёд (→)" onClick={() => go('next')}><ForwardIcon /></button>
           <button className={`s-btn like${liked ? ' on' : ''}`} aria-label="Лайк" aria-pressed={liked} data-tip="Лайк (L)" onClick={() => void like()}><HeartIcon filled={liked} /></button>
-          <button className="s-btn dislike" aria-label="Дизлайк: переместить в корзину" data-tip="Дизлайк: в корзину (D)" onClick={() => void dislike()}><UrnIcon /></button>
+          <button className="s-btn dislike" aria-label="Дизлайк: убрать из сессий" data-tip="Дизлайк: пометить файл _del (D)" onClick={() => void dislike()}><UrnIcon /></button>
           <button className="s-btn" aria-label="Выйти из сессии" data-tip="Выйти (Esc)" onClick={() => void leave(false)}><ExitIcon /></button>
         </div>
       </div>

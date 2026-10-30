@@ -1,4 +1,4 @@
-import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
+import { _electron as electron, expect, type ElectronApplication, type Page } from '@playwright/test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -80,4 +80,13 @@ export function query<T>(dataDir: string, sql: string): T[] {
   } finally {
     db.close();
   }
+}
+
+/** Выбирает категорию для всего пресета в редакторе, сохраняет дискетой и возвращает циферблат. */
+export async function choosePresetCategory(win: Page, preset: RegExp, category: string): Promise<void> {
+  await win.getByRole('button', { name: preset }).click();
+  await win.getByRole('group', { name: 'Категории пресета' }).getByRole('button', { name: category, exact: true }).click();
+  await win.getByRole('button', { name: 'Сохранить пресет' }).click();
+  await win.locator('.start-text').click();
+  await expect(win.getByRole('region', { name: 'Циферблат пресета' })).toBeVisible();
 }

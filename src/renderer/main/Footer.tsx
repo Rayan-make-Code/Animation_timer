@@ -3,11 +3,16 @@ import type { RenameReport, SyncResult } from '../../shared/api';
 import { Icon } from '../components';
 import { errorText, useStore } from '../store';
 
-const summary = (r: { sync: SyncResult; rename: RenameReport }) =>
-  `Новых изображений: ${r.sync.addedImages}, не найдено на диске: ${r.sync.missing}, переименовано: ${r.rename.renamed}` +
-  (r.rename.failed.length ? `, ошибок переименования: ${r.rename.failed.length}` : '');
+/** Короткая сводка по библиотеке: только то, что изменилось. */
+const summary = (r: { sync: SyncResult; rename: RenameReport }) => {
+  const parts = [`новых ${r.sync.addedImages}`];
+  if (r.sync.missing) parts.push(`пропало ${r.sync.missing}`);
+  if (r.rename.renamed) parts.push(`переименовано ${r.rename.renamed}`);
+  if (r.rename.failed.length) parts.push(`ошибок ${r.rename.failed.length}`);
+  return `Библиотека: ${parts.join(', ')}`;
+};
 
-/** Подвал: шестерёнка с панелью библиотеки и путь к папке. */
+/** Подвал: шестерёнка; раскрытый подвал показывает панель библиотеки и путь к папке. По умолчанию свёрнут, при первом запуске раскрыт. */
 export function Footer({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const { library, reloadLibrary, reloadPresets, setNotice } = useStore();
   const [busy, setBusy] = useState(false);
@@ -30,35 +35,35 @@ export function Footer({ open, onToggle }: { open: boolean; onToggle: () => void
   });
 
   return (
-    <footer className="footer">
+    <footer className={`footer${open ? '' : ' collapsed'}`}>
       {open && (
         <div className="lib-panel slide" role="toolbar" aria-label="Библиотека">
           <button className="btn small" data-tip="Обновить библиотеку" disabled={busy || !library} onClick={() => run(async () => summary(await window.sketch.syncLibrary()))}>Обновить</button>
           <button className="btn small" data-tip="Переименовать новые файлы" disabled={busy || !library} onClick={() => run(async () => {
             const r = await window.sketch.renameNew();
-            return `Переименовано: ${r.renamed}` + (r.failed.length ? `, ошибок: ${r.failed.length}` : '');
+            return `Переименовано ${r.renamed}` + (r.failed.length ? `, ошибок ${r.failed.length}` : '');
           })}>Переименовать</button>
           <button className="btn small" data-tip="Сохранить оценки и пресеты в файл" disabled={busy} onClick={() => run(async () => {
             const p = await window.sketch.exportBackup(false);
-            return p ? `Резервная копия сохранена: ${p}` : null;
+            return p ? `Бэкап сохранён: ${p.split(/[\\/]/).pop()}` : null;
           })}>Бэкап</button>
           <button className="btn small" data-tip="Загрузить оценки и пресеты из файла" disabled={busy} onClick={() => run(async () => {
             const r = await window.sketch.importBackup();
             if (!r) return null;
             await reloadPresets();
-            return `Импорт: оценок применено ${r.ratingsApplied}, не найдено ${r.ratingsUnmatched.length}, пресетов добавлено ${r.presetsAdded}`;
+            return `Импорт: оценок ${r.ratingsApplied}, пресетов ${r.presetsAdded}` + (r.ratingsUnmatched.length ? `, не найдено ${r.ratingsUnmatched.length}` : '');
           })}>Импорт</button>
         </div>
       )}
       <div className="footer-row">
-        <button className={`icon-btn${open ? ' on' : ''}`} aria-label="Настройки библиотеки" data-tip="Настройки библиотеки" aria-expanded={open} onClick={onToggle}>
+        <button className={`icon-btn${open ? ' on' : ''}`} aria-label="Меню библиотеки" data-tip="Меню библиотеки" aria-expanded={open} onClick={onToggle}>
           <Icon name="sliders" size={16} />
         </button>
-        <button className="lib-path" disabled={busy} aria-label={library ? 'Сменить папку библиотеки' : 'Выбрать папку библиотеки'}
+        {open && <button className="lib-path" disabled={busy} aria-label={library ? 'Сменить папку библиотеки' : 'Выбрать папку библиотеки'}
           data-tip={library ? 'Сменить папку библиотеки' : 'Выбрать папку библиотеки'} onClick={() => void connect()}>
           <Icon name="folder" size={13} />
           <span className="ellipsis">{library ?? 'Папка не выбрана'}</span>
-        </button>
+        </button>}
       </div>
     </footer>
   );

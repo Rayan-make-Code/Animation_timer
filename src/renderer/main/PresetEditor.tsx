@@ -74,6 +74,15 @@ export const PresetEditor = forwardRef<EditorHandle, {
   const [draft, setDraft] = useState<NewPreset>(() => ({ ...initial, categoryIds: initial.categoryIds ?? [], groups: withPrepare(initial.groups) }));
   const [sel, setSel] = useState(0);
   const idRef = useRef(presetId);
+  // Черновик изменён после последнего сохранения: только тогда переход к другому полю сохраняет.
+  const dirty = useRef(false);
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (mounted.current) dirty.current = true;
+    mounted.current = true;
+  }, [draft]);
+  // Сохранения идут строго по очереди: новый пресет не создаётся дважды.
+  const chain = useRef<Promise<boolean>>(Promise.resolve(true));
   const errors = validatePreset(draft);
   const groups = draft.groups;
   const setGroups = (g: Group[], nextSel: number) => {
@@ -82,31 +91,30 @@ export const PresetEditor = forwardRef<EditorHandle, {
   };
   const setGroup = (i: number, patch: Partial<Group>) => setDraft({ ...draft, groups: groups.map((g, j) => (j === i ? { ...g, ...patch } : g)) });
 
-  /** Сохраняет переданный черновик; при ошибках валидации ничего не пишет. */
-  const persist = async (d: NewPreset): Promise<boolean> => {
-    if (validatePreset(d).length > 0) return false;
-    const id = await onSave(normalize(d), idRef.current);
-    if (id !== null) idRef.current = id;
-    return id !== null;
+  /** Сохраняет черновик (после предыдущего сохранения); при ошибках валидации ничего не пишет. */
+  const persist = (d: NewPreset): Promise<boolean> => {
+    const run = async () => {
+      if (validatePreset(d).length > 0) return false;
+      dirty.current = false;
+      const id = await onSave(normalize(d), idRef.current);
+      if (id === null) dirty.current = true;
+      else idRef.current = id;
+      return id !== null;
+    };
+    chain.current = chain.current.then(run, run);
+    return chain.current;
   };
-  const commit = () => persist(draft);
+  /** Автосохранение: только если черновик менялся. */
+  const commit = (): Promise<boolean> => (dirty.current ? persist(draft) : Promise.resolve(true));
   useImperativeHandle(ref, () => ({ commit }), [draft, onSave]);
 
-  // Фокус перешёл из одного поля редактора в другое: сохраняем, как только поле заполнено.
+  // Фокус перешёл в другое поле редактора после изменения: сохраняем.
   const onBlur = (e: FocusEvent<HTMLElement>) => {
     if (e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)) void commit();
   };
-  // Переключение тега сразу сохраняет черновик: кнопка не даёт перейти к другому полю.
-  const toggleTop = (id: number) => {
-    const d = { ...draft, categoryIds: toggleId(draft.categoryIds ?? [], id) };
-    setDraft(d);
-    void persist(d);
-  };
-  const toggleGroup = (i: number, id: number) => {
-    const d = { ...draft, groups: groups.map((g, j) => (j === i ? { ...g, categoryIds: toggleId(g.categoryIds ?? [], id) } : g)) };
-    setDraft(d);
-    void persist(d);
-  };
+  const toggleTop = (id: number) => setDraft({ ...draft, categoryIds: toggleId(draft.categoryIds ?? [], id) });
+  const toggleGroup = (i: number, id: number) =>
+    setDraft({ ...draft, groups: groups.map((g, j) => (j === i ? { ...g, categoryIds: toggleId(g.categoryIds ?? [], id) } : g)) });
 
   return (
     <section className="editor swap" aria-label="Редактирование пресета" onBlur={onBlur}>
@@ -126,6 +134,7 @@ export const PresetEditor = forwardRef<EditorHandle, {
         <button className="icon-btn" aria-label="Дублировать этап" data-tip="Дублировать этап" disabled={sel === 0} onClick={() => setGroups(duplicateGroup(groups, sel), sel + 1)}><Icon name="copy" /></button>
         <button className="icon-btn" aria-label="Переставить этап вверх" data-tip="Переставить этап вверх" disabled={sel <= 1} onClick={() => setGroups(moveGroupUp(groups, sel), sel - 1)}><Icon name="up" /></button>
         <button className="icon-btn" aria-label="Удалить этап" data-tip="Удалить этап" disabled={sel === 0 || groups.length <= 1} onClick={() => setGroups(removeGroup(groups, sel), sel)}><Icon name="trash" /></button>
+        <button className="icon-btn ed-save" aria-label="Сохранить пресет" data-tip="Сохранить пресет" disabled={errors.length > 0} onClick={() => void persist(draft)}><Icon name="save" /></button>
       </div>
       {groups.map((g, i) => {
         const n = i + 1;
@@ -157,7 +166,6 @@ export const PresetEditor = forwardRef<EditorHandle, {
               {!prep && tags.length > 0 && (
                 <div className="ed-row-cats">
                   <CategoryChips tags={tags} selected={own} label={`Этап ${n}: категории`} onToggle={(id) => toggleGroup(i, id)} />
-                  {own.length === 0 && <span className="ed-hint">как у пресета</span>}
                 </div>
               )}
             </div>

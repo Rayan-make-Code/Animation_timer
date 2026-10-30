@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { NewPreset, Preset } from '../../shared/api';
-import { CategoryTags, flattenTags } from '../main/CategoryTags';
+import { flattenTags } from '../main/CategoryTags';
 import { Dial } from '../main/Dial';
 import { Footer } from '../main/Footer';
 import { blankPreset, PresetEditor, type EditorHandle } from '../main/PresetEditor';
@@ -11,9 +11,11 @@ import { errorText, useStore } from '../store';
 interface Editing { id?: number; initial: NewPreset; key: number }
 
 let editKey = 0;
+/** Сколько показывается уведомление, мс. */
+const NOTICE_MS = 5000;
 const editOf = (p: Preset): Editing => ({ id: p.id, initial: { name: p.name, description: p.description, groups: p.groups }, key: ++editKey });
 
-/** Главный экран: пресеты → циферблат или редактор → описание → категории → «Старт» → подвал. */
+/** Главный экран: пресеты → циферблат или редактор (с категориями пресета и интервалов) → описание → «Старт» → подвал. */
 export function Main() {
   const { presets, reloadPresets, selectedPresetId, selectPreset, firstRun, notice, setNotice, tree } = useStore();
   const [editing, setEditing] = useState<Editing | null>(null);
@@ -47,6 +49,13 @@ export function Main() {
       return null;
     }
   };
+  // Уведомление короткое и исчезает само через несколько секунд.
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), NOTICE_MS);
+    return () => clearTimeout(t);
+  }, [notice, setNotice]);
+
   const remove = async () => {
     if (!preset) return;
     try {
@@ -62,15 +71,8 @@ export function Main() {
   return (
     <>
       <main className="main" onPointerDownCapture={(e) => {
-        if (!editing) return;
-        const target = e.target as Element;
-        // Общий блок категорий: сохраняем черновик и возвращаем циферблат. Нажатие на тег потом переключит его.
-        if (target.closest('.tags')) {
-          void commit().then((ok) => ok && setEditing(null));
-        } else if (!target.closest('.editor, .preset-row')) {
-          // Прочие нажатия вне редактора и ряда пресетов («Старт», подвал) только сохраняют черновик.
-          void commit();
-        }
+        // Нажатие вне редактора и ряда пресетов сохраняет черновик и возвращает циферблат.
+        if (editing && !(e.target as Element).closest('.editor, .preset-row')) void commit().then((ok) => ok && setEditing(null));
       }}>
         <PresetRow presets={list} selectedId={selectedPresetId} onPick={(p) => void pick(p)} onNew={() => void newPreset()} />
         {editing ? (
@@ -83,7 +85,6 @@ export function Main() {
             <span className="desc-name">{preset.name}</span>{preset.description ? ` — ${preset.description}` : ''}
           </section>
         )}
-        <CategoryTags />
         <StartBar preset={preset} onEdit={() => preset && setEditing(editOf(preset))} onDelete={remove} />
         {notice && (
           <div className="notice" role="status">
