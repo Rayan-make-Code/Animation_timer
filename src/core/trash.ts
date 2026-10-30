@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type { Db } from './db';
+import { insideRoot } from './paths';
 
 /** Перемещает файл в корзину ОС (в приложении — shell.trashItem). */
 export type TrashFn = (absPath: string) => Promise<void>;
@@ -10,8 +11,7 @@ export async function trashImage(db: Db, root: string, imageId: number, trash: T
   if (!row) throw new Error(`Изображение ${imageId} не найдено`);
   const base = path.resolve(root);
   const abs = path.resolve(base, ...row.relPath.split('/'));
-  const rel = path.relative(base, abs);
-  if (!rel || rel === '..' || rel.startsWith('..' + path.sep) || path.isAbsolute(rel)) throw new Error('Путь вне папки библиотеки');
+  if (!insideRoot(base, abs)) throw new Error('Путь вне папки библиотеки');
   try {
     await trash(abs);
   } catch (e) {

@@ -11,6 +11,7 @@ import { IMAGE_COLUMNS, recordView, setRating, toggleRating, toImageRow, undoVie
 import { renameNewImages } from '../src/core/rename';
 import { seedDefaultPresets } from '../src/core/defaults';
 import { getSetting, parseIds, setSetting } from '../src/core/settings';
+import { insideRoot } from '../src/core/paths';
 import { trashImage } from '../src/core/trash';
 import { assertWritable, resolveDataDir } from './paths';
 
@@ -164,7 +165,7 @@ function registerImageProtocol() {
     if (!root || !row) return new Response('Not found', { status: 404 });
     const file = path.resolve(root, ...toImageRow(row).relPath.split('/'));
     // Отдаём только файлы внутри библиотеки.
-    if (!file.startsWith(path.resolve(root) + path.sep)) return new Response('Forbidden', { status: 403 });
+    if (!insideRoot(root, file)) return new Response('Forbidden', { status: 403 });
     return net.fetch(pathToFileURL(file).toString());
   });
 }
