@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { imageUrl } from '../../shared/api';
 import { expandPreset, SessionMachine } from '../../core/timer';
 import { mmss } from '../../core/dial';
-import { BackIcon, ExitIcon, ForwardIcon, HeartIcon, PauseIcon, PlayIcon, UrnIcon } from '../icons';
+import { BackIcon, ExitIcon, ForwardIcon, HeartIcon, PauseIcon, PlayIcon, ThumbDownIcon } from '../icons';
 import { playChime } from '../sound';
 import { errorText, useStore } from '../store';
 
@@ -167,7 +167,7 @@ export function Session() {
           </button>
           <button className="s-btn" aria-label="Следующее изображение" data-tip="Вперёд (→)" onClick={() => go('next')}><ForwardIcon /></button>
           <button className={`s-btn like${liked ? ' on' : ''}`} aria-label="Лайк" aria-pressed={liked} data-tip="Лайк (L)" onClick={() => void like()}><HeartIcon /></button>
-          <button className="s-btn dislike" aria-label="Дизлайк: убрать из сессий" data-tip="Дизлайк: пометить файл _del (D)" onClick={() => void dislike()}><UrnIcon /></button>
+          <button className="s-btn dislike" aria-label="Дизлайк: убрать из сессий" data-tip="Дизлайк: пометить файл _del (D)" onClick={() => void dislike()}><ThumbDownIcon /></button>
           <button className="s-btn" aria-label="Выйти из сессии" data-tip="Выйти (Esc)" onClick={() => void leave(false)}><ExitIcon /></button>
         </div>
       </div>
