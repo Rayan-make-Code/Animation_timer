@@ -13,9 +13,9 @@ interface Store {
   library: string | null;
   tree: CategoryNode[];
   reloadLibrary: () => Promise<void>;
-  /** Выбранные категории (id). */
+  /** Категории выбранного пресета (id); переключаются тегами на главном экране. */
   selected: number[];
-  toggleCategory: (id: number) => void;
+  toggleCategory: (id: number) => Promise<void>;
   session: ActiveSession | null;
   setSession: (s: ActiveSession | null) => void;
   notice: string | null;
@@ -30,31 +30,11 @@ interface Store {
 
 const Ctx = createContext<Store | null>(null);
 
-/** id категорий, у которых есть теги: папки без изображений скрыты и выбранными быть не могут. */
-const visibleIds = (nodes: CategoryNode[]): Set<number> => {
-  const ids = new Set<number>();
-  const walk = (ns: CategoryNode[]) => ns.forEach((n) => { if (n.imageCount > 0) ids.add(n.id); walk(n.children); });
-  walk(nodes);
-  return ids;
-};
-
-/** Убирает из выбора скрытые и удалённые категории; изменившийся список сохраняется. */
-const cleanSelection = (sel: number[], nodes: CategoryNode[]): number[] => {
-  const ids = visibleIds(nodes);
-  if (sel.every((id) => ids.has(id))) return sel;
-  const next = sel.filter((id) => ids.has(id));
-  void window.sketch.saveSettings({ selectedCategories: next });
-  return next;
-};
-
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [presets, setPresets] = useState<Preset[] | null>(null);
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
   const [library, setLibrary] = useState<string | null>(null);
   const [tree, setTree] = useState<CategoryNode[]>([]);
-  const [selected, setSelected] = useState<number[]>([]);
-  const selectedRef = useRef(selected);
-  selectedRef.current = selected;
   const [session, setSession] = useState<ActiveSession | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [firstRun, setFirstRun] = useState(false);
@@ -70,7 +50,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const [state, nodes] = await Promise.all([window.sketch.getState(), window.sketch.getTree()]);
     setLibrary(state.library);
     setTree(nodes);
-    setSelected(cleanSelection(selectedRef.current, nodes));
   }, []);
 
   useEffect(() => {
@@ -82,7 +61,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setFirstRun(!settings.firstRunDone);
         setLibrary(state.library);
         setTree(nodes);
-        setSelected(cleanSelection(settings.selectedCategories, nodes));
         setPresets(list);
         setSelectedPresetId(list.some((p) => p.id === settings.selectedPreset) ? settings.selectedPreset : list[0]?.id ?? null);
       } catch (e) {
@@ -97,11 +75,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     void window.sketch.saveSettings({ selectedPreset: id });
   }, []);
 
-  const toggleCategory = useCallback((id: number) => {
-    const next = selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id];
-    setSelected(next);
-    void window.sketch.saveSettings({ selectedCategories: next });
-  }, [selected]);
+  // Категории принадлежат пресету: переключение сразу сохраняется в его записи.
+  const selected = presets?.find((p) => p.id === selectedPresetId)?.categoryIds ?? [];
+  // Переключения идут по очереди: каждое читает список пресетов свежим, как и сохранение открытого редактора.
+  const toggleChain = useRef<Promise<void>>(Promise.resolve());
+  const toggleCategory = useCallback((id: number): Promise<void> => {
+    const run = async () => {
+      const list = await window.sketch.listPresets();
+      const preset = list.find((p) => p.id === selectedPresetId);
+      if (!preset) return;
+      const current = preset.categoryIds ?? [];
+      await window.sketch.setPresetCategories(preset.id, current.includes(id) ? current.filter((x) => x !== id) : [...current, id]);
+      await reloadPresets();
+    };
+    toggleChain.current = toggleChain.current.then(run, run).catch((e) => setNotice(errorText(e)));
+    return toggleChain.current;
+  }, [selectedPresetId, reloadPresets]);
 
   const finishFirstRun = useCallback(() => {
     setFirstRun(false);

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { dropImage, expandPreset, SessionMachine, totalWork, type Step } from '../../src/core/timer';
+import { categoryKey } from '../../src/core/presetModel';
 import type { NewPreset } from '../../src/core/presets';
 import type { QueueItem } from '../../src/core/picker';
 
@@ -230,5 +231,45 @@ describe('SessionMachine.replaceImage', () => {
     expect(machine.steps.every((s) => s.workIndex === 0)).toBe(true);
     machine.next();
     expect(machine.state).toBe('finished');
+  });
+});
+
+describe('categories per preset and interval', () => {
+  const base: NewPreset = {
+    name: 'c',
+    description: '',
+    categoryIds: [1],
+    groups: [
+      { repeats: 1, workLabel: 'Приготовьтесь', workSec: 5, restSec: 0 },
+      { repeats: 2, workLabel: 'Позы', workSec: 60, restSec: 0 },
+      { repeats: 1, workLabel: 'Лица', workSec: 60, restSec: 0, categoryIds: [7] },
+    ],
+  };
+
+  test('an interval without its own categories takes the preset categories', () => {
+    const steps = expandPreset(base);
+    const work = steps.filter((s) => s.kind === 'work');
+    expect(work.map((s) => s.categoryIds)).toEqual([[1], [1], [7]]);
+  });
+
+  test('the prepare step takes the categories of the first interval', () => {
+    const steps = expandPreset({ ...base, groups: [{ ...base.groups[0], categoryIds: [9] }, base.groups[1]] });
+    expect(steps[0]).toMatchObject({ kind: 'prepare', categoryIds: [1] });
+  });
+
+  test('categoryKey ignores the order of ids', () => {
+    expect(categoryKey([3, 1])).toBe(categoryKey([1, 3]));
+  });
+
+  test('a replacement image comes from the same category set only', () => {
+    const q = [
+      { image: { id: 1 }, categoryId: 1, cycle: 1 },
+      { image: { id: 2 }, categoryId: 7, cycle: 1 },
+      { image: { id: 1 }, categoryId: 1, cycle: 1 },
+      { image: { id: 3 }, categoryId: 7, cycle: 1 },
+    ] as QueueItem[];
+    const keys = ['1', '7', '1', '7'];
+    // Первый показ 1 (set «1») заменяется другим изображением того же набора: другого в «1» нет — очередь обрывается.
+    expect(ids(dropImage(q, 1, 0, (p) => keys[p]))).toEqual([1]);
   });
 });

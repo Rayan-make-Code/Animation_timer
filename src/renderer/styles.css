@@ -51,10 +51,11 @@ button { cursor: pointer; }
 @keyframes slideIn { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
 .slide { animation: slideIn .32s var(--hover-ease) both; }
 .rise { animation: slideIn .36s var(--hover-ease) both; }
-@keyframes flipIn { from { opacity: 0; transform: perspective(900px) rotateY(90deg); } to { opacity: 1; transform: perspective(900px) rotateY(0); } }
-.flip { animation: flipIn .5s var(--hover-ease) both; }
+/* Смена редактора и циферблата: мягкое проявление с лёгким приближением и расфокусом, без поворота. */
+@keyframes swapIn { from { opacity: 0; transform: scale(.97); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+.swap { animation: swapIn .34s var(--hover-ease) both; }
 @media (prefers-reduced-motion: reduce) {
-  .slide, .rise, .flip { animation: none; }
+  .slide, .rise, .swap { animation: none; }
 }
 
 /* Кнопки */
@@ -90,7 +91,11 @@ button.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background
 .main { min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 10px; }
 
 /* Пресеты */
-.preset-row { display: flex; gap: 6px; align-items: flex-start; overflow-x: auto; flex: none; }
+.preset-row { display: flex; gap: 6px; align-items: flex-start; overflow-x: auto; flex: none; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; padding-bottom: 4px; }
+.preset-row::-webkit-scrollbar { height: 6px; }
+.preset-row::-webkit-scrollbar-track { background: transparent; }
+.preset-row::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 3px; }
+.preset-row::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
 .preset-pick { flex: none; width: 58px; border: 0; background: transparent; padding: 4px 0 2px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-2); font-size: 12px; }
 .preset-pick:hover { background: var(--panel-2); }
 .preset-pick.active { outline: 1px solid var(--line-2); outline-offset: -1px; }
@@ -128,6 +133,10 @@ button.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background
 .editor .ed-rep-fixed { width: 38px; flex: none; text-align: center; color: var(--text-3); font-size: 13px; }
 .editor .ed-rep input { width: 38px; padding: 0 4px; text-align: center; border-radius: 8px; background: var(--panel-2); }
 .ed-boxes { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.ed-cats { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.ed-hint { font-size: 12px; color: var(--text-3); }
+.ed-row-cats { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.editor .ed-errors { margin: 0; padding: 8px 10px; }
 .ed-box { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 4px 0 10px; border: 1px solid; border-radius: 8px; }
 .ed-box.work { color: var(--work); border-color: var(--work-line); background: var(--work-bg); }
 .ed-box.rest { color: var(--done); border-color: var(--done-line); background: var(--done-bg); }
@@ -175,7 +184,7 @@ button.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background
 .stage-img.dim { opacity: .35; }
 .session-progress { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: rgba(43, 44, 52, .85); }
 .session-progress-fill { height: 100%; background: var(--work); transition: width .3s var(--hover-ease); }
-.session-strip { position: absolute; top: 3px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 4px 14px 6px; background: rgba(26, 27, 32, .78); border: 1px solid rgba(42, 43, 50, .9); border-top: 0; border-radius: 0 0 8px 8px; font-size: 12.5px; color: var(--text-3); }
+.session-strip { position: absolute; top: 14px; right: 16px; display: flex; align-items: center; gap: 10px; padding: 4px 12px; background: rgba(26, 27, 32, .78); border: 1px solid rgba(42, 43, 50, .9); border-radius: 8px; font-size: 12.5px; color: var(--text-3); }
 .phase-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--work); }
 .phase-dot.rest { background: var(--done); }
 .phase-dot.prepare { background: var(--prepare); }
@@ -183,8 +192,8 @@ button.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background
 .session-count { font-variant-numeric: tabular-nums; }
 .session-dock { position: absolute; right: 16px; bottom: 16px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .session-error { max-width: 360px; padding: 4px 9px; border: 1px solid var(--fix-line); background: rgba(48, 26, 28, .92); color: var(--fix); border-radius: 6px; font-size: 12.5px; }
-.session-tools { display: flex; gap: 2px; padding: 3px; background: rgba(26, 27, 32, .92); border: 1px solid var(--line-2); border-radius: 8px; }
-.s-btn { width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--text-2); }
+.session-tools { display: flex; gap: 6px; }
+.s-btn { width: 42px; height: 42px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--text-2); }
 .s-btn:hover:not(:disabled) { color: var(--text); }
 .s-btn.main { background: #eceef4; color: #15161b; }
 button.s-btn.main:hover:not(:disabled) { background: #fff; color: #15161b; }

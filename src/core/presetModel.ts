@@ -1,7 +1,15 @@
 // Чистая модель пресета без зависимостей от базы: используется и в renderer.
-export interface Group { repeats: number; workLabel: string; workSec: number; restSec: number }
-export interface NewPreset { name: string; description: string; groups: Group[] }
+/** Интервал. categoryIds — свои категории интервала; пусто — берутся категории пресета. */
+export interface Group { repeats: number; workLabel: string; workSec: number; restSec: number; categoryIds?: number[] }
+/** categoryIds — категории всего пресета (id папок библиотеки). */
+export interface NewPreset { name: string; description: string; categoryIds?: number[]; groups: Group[] }
 export interface Preset extends NewPreset { id: number }
+
+/** Категории, из которых тянется изображение интервала: свои, если заданы, иначе категории пресета. */
+export const groupCategories = (p: NewPreset, g: Group): number[] => (g.categoryIds?.length ? g.categoryIds : p.categoryIds ?? []);
+
+/** Ключ набора категорий: одинаковые наборы в разном порядке дают одну очередь. */
+export const categoryKey = (ids: readonly number[]): string => [...ids].sort((a, b) => a - b).join(',');
 
 export function validatePreset(p: NewPreset): string[] {
   const errors: string[] = [];

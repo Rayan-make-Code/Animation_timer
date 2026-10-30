@@ -1,31 +1,31 @@
 // Иконки панели сессии (из макета Session).
 
 export function BackIcon() {
-  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 5v14" /><path d="M18 5l-9 7 9 7z" /></svg>;
+  return <svg width="22.5" height="22.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 5v14" /><path d="M18 5l-9 7 9 7z" /></svg>;
 }
 
 export function ForwardIcon() {
-  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 5v14" /><path d="M6 5l9 7-9 7z" /></svg>;
+  return <svg width="22.5" height="22.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 5v14" /><path d="M6 5l9 7-9 7z" /></svg>;
 }
 
 export function PauseIcon() {
-  return <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>;
+  return <svg width="22.5" height="22.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>;
 }
 
 export function PlayIcon() {
-  return <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" /></svg>;
+  return <svg width="22.5" height="22.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" /></svg>;
 }
 
 /** Сердце: залито, когда лайк стоит. */
 export function HeartIcon({ filled }: { filled: boolean }) {
-  return <svg width="15" height="15" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>;
+  return <svg width="22.5" height="22.5" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>;
 }
 
 export function UrnIcon() {
-  return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16" /><path d="M9 7V4h6v3" /><path d="M6 7l1 13h10l1-13" /><path d="M10 11v6M14 11v6" /></svg>;
+  return <svg width="22.5" height="22.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16" /><path d="M9 7V4h6v3" /><path d="M6 7l1 13h10l1-13" /><path d="M10 11v6M14 11v6" /></svg>;
 }
 
 /** EXIT: человечек выходит в дверь. */
 export function ExitIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 3h6v18h-6" /><circle cx="8" cy="5" r="1.7" /><path d="M8 8l-1.5 5 3 2v5" /><path d="M7.7 9.5L11 11.5h2.5" /><path d="M6.5 13l-2.5 2" /><path d="M6.5 13L5 20" /></svg>;
+  return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 3h6v18h-6" /><circle cx="8" cy="5" r="1.7" /><path d="M8 8l-1.5 5 3 2v5" /><path d="M7.7 9.5L11 11.5h2.5" /><path d="M6.5 13l-2.5 2" /><path d="M6.5 13L5 20" /></svg>;
 }

@@ -3,15 +3,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { launch, makeLibrary, query, tempRoot } from './helpers';
 
-/** Запуск сессии через главный экран: тег «Позы», пресет «Тест», «Старт». */
+/** Запуск сессии через главный экран: пресет «Тест», тег «Позы» для его категорий, «Старт». */
 async function prepare(durationSec: number, repeats: number, opts: { restSec?: number; trash?: string; dblclick?: boolean } = {}) {
   const trash = opts.trash ?? path.join(tempRoot(), 'trash');
   const run = await launch(undefined, makeLibrary(), { SKETCH_FAKE_TRASH: trash });
   const { win } = run;
   await win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
-  const tags = win.getByRole('group', { name: 'Категории' });
-  await tags.getByRole('button', { name: 'Позы', exact: true }).click();
-  await expect(tags.getByRole('button', { name: 'Позы', exact: true })).toHaveAttribute('aria-pressed', 'true');
   const id = await win.evaluate(([sec, rep, rest]) => window.sketch.savePreset({
     name: 'Тест', description: '', groups: [{ repeats: rep, workLabel: 'Наброски', workSec: sec, restSec: rest }],
   }), [durationSec, repeats, opts.restSec ?? 0]);
@@ -20,6 +17,10 @@ async function prepare(durationSec: number, repeats: number, opts: { restSec?: n
   await win.reload();
   await win.waitForSelector('.app');
   await expect(win.getByRole('button', { name: /^Тест/ })).toHaveAttribute('aria-pressed', 'true');
+  // Категории принадлежат пресету: тег «Позы» выбирает их для «Тест».
+  const tags = win.getByRole('group', { name: 'Категории', exact: true });
+  await tags.getByRole('button', { name: 'Позы', exact: true }).click();
+  await expect(tags.getByRole('button', { name: 'Позы', exact: true })).toHaveAttribute('aria-pressed', 'true');
   const startBounds = await run.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getBounds());
   const start = win.getByRole('button', { name: 'Старт', exact: true });
   if (opts.dblclick) await start.dblclick();

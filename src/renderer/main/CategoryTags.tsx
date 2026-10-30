@@ -1,10 +1,10 @@
 import type { CategoryNode } from '../../shared/api';
 import { useStore } from '../store';
 
-interface Tag { id: number; name: string; sub: boolean }
+export interface CategoryTag { id: number; name: string; sub: boolean }
 
 /** Дерево → плоский список тегов; папки без изображений не показываются. */
-export function flattenTags(nodes: CategoryNode[], depth = 0): Tag[] {
+export function flattenTags(nodes: CategoryNode[], depth = 0): CategoryTag[] {
   return nodes.flatMap((n) => [
     ...(n.imageCount > 0 ? [{ id: n.id, name: n.name, sub: depth > 0 }] : []),
     ...flattenTags(n.children, depth + 1),
@@ -19,7 +19,7 @@ export function CategoryTags() {
   return (
     <section className="tags" role="group" aria-label="Категории">
       {tags.map((t) => (
-        <button key={t.id} className={`chip${t.sub ? ' sub' : ''}`} aria-pressed={selected.includes(t.id)} onClick={() => toggleCategory(t.id)}>
+        <button key={t.id} className={`chip${t.sub ? ' sub' : ''}`} aria-pressed={selected.includes(t.id)} onClick={() => void toggleCategory(t.id)}>
           {t.name}
         </button>
       ))}

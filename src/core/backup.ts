@@ -1,5 +1,5 @@
 import { transaction, type Db } from './db';
-import { listPresets, savePreset, type NewPreset, type Preset } from './presets';
+import { listPresets, savePreset, type Group, type NewPreset, type Preset } from './presets';
 
 export const BACKUP_FORMAT = 'sketch-timer-backup';
 export const BACKUP_VERSION = 1;
@@ -64,7 +64,12 @@ export function importBackup(db: Db, data: unknown): ImportReport {
 
     const taken = new Set(listPresets(db).map((p) => p.name));
     for (const p of file.presets) {
-      const preset: NewPreset = { name: String(p?.name ?? ''), description: String(p?.description ?? ''), groups: Array.isArray(p?.groups) ? p.groups : [] };
+      // Категории в файле — id папок другой библиотеки, поэтому при импорте их не переносим.
+      const preset: NewPreset = {
+        name: String(p?.name ?? ''),
+        description: String(p?.description ?? ''),
+        groups: Array.isArray(p?.groups) ? p.groups.map((g: Group) => ({ ...g, categoryIds: [] })) : [],
+      };
       if (taken.has(preset.name)) preset.name = `${preset.name} (импорт)`;
       try {
         savePreset(db, preset);

@@ -25,7 +25,10 @@ export interface SketchApi {
   savePreset(p: NewPreset & { id?: number }): Promise<number>;
   copyPreset(id: number): Promise<number>;
   deletePreset(id: number): Promise<void>;
-  buildQueue(categoryIds: number[], count: number): Promise<QueueItem[]>;
+  /** Категории всего пресета (переключение тегов на главном экране). */
+  setPresetCategories(id: number, categoryIds: number[]): Promise<void>;
+  /** Очередь по рабочим шагам: slots[i] — категории изображения шага i. */
+  buildQueue(slots: number[][]): Promise<QueueItem[]>;
   recordView(imageId: number, cycle: number): Promise<number>;
   undoView(viewId: number): Promise<void>;
   /** Диалог сохранения. Возвращает путь файла или null при отмене. */

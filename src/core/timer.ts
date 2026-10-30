@@ -1,5 +1,5 @@
 import type { QueueItem } from './picker';
-import type { NewPreset } from './presetModel';
+import { categoryKey, groupCategories, type NewPreset } from './presetModel';
 
 export interface Step {
   kind: 'prepare' | 'work' | 'rest';
@@ -7,6 +7,8 @@ export interface Step {
   sec: number;
   /** Индекс рабочего интервала, чьё изображение показывается (у отдыха — предыдущего рабочего). */
   workIndex: number;
+  /** Категории, из которых берётся изображение шага (свои у интервала или категории пресета). */
+  categoryIds: number[];
 }
 
 /**
@@ -17,18 +19,23 @@ export function expandPreset(p: NewPreset): Step[] {
   const steps: Step[] = [];
   let work = 0;
   p.groups.forEach((g, gi) => {
+    const categoryIds = groupCategories(p, g);
     if (gi === 0 && p.groups.length > 1 && g.repeats === 1 && g.restSec === 0) {
-      steps.push({ kind: 'prepare', label: g.workLabel, sec: g.workSec, workIndex: 0 });
+      steps.push({ kind: 'prepare', label: g.workLabel, sec: g.workSec, workIndex: 0, categoryIds });
       return;
     }
     for (let r = 0; r < g.repeats; r++) {
-      steps.push({ kind: 'work', label: g.workLabel, sec: g.workSec, workIndex: work });
-      if (g.restSec > 0) steps.push({ kind: 'rest', label: 'Отдых', sec: g.restSec, workIndex: work });
+      steps.push({ kind: 'work', label: g.workLabel, sec: g.workSec, workIndex: work, categoryIds });
+      if (g.restSec > 0) steps.push({ kind: 'rest', label: 'Отдых', sec: g.restSec, workIndex: work, categoryIds });
       work++;
     }
   });
   // После последнего повтора перерыва не бывает.
   if (steps.length > 0 && steps[steps.length - 1].kind === 'rest') steps.pop();
+  // Подготовка показывает то же изображение, что и первый рабочий интервал, поэтому берёт его категории.
+  const prepare = steps.find((s) => s.kind === 'prepare');
+  const first = steps.find((s) => s.kind === 'work');
+  if (prepare && first) prepare.categoryIds = first.categoryIds;
   return steps;
 }
 
@@ -45,13 +52,15 @@ export interface SessionHooks<H = number> {
  * Его записи после позиции after заменяются другим изображением этой же очереди — тем, чей ближайший показ дальше всего;
  * замена копирует ближайший предыдущий показ (папка и цикл те же). Если других изображений нет, очередь обрывается на after.
  */
-export function dropImage(queue: QueueItem[], imageId: number, after: number): QueueItem[] {
+export function dropImage(queue: QueueItem[], imageId: number, after: number, keyOf: (pos: number) => string = () => ''): QueueItem[] {
   const out = [...queue];
-  const others = [...new Set(queue.filter((q) => q.image.id !== imageId).map((q) => q.image.id))];
   for (let j = after + 1; j < out.length; j++) {
     if (out[j].image.id !== imageId) continue;
+    // Замена берётся только из категорий того же интервала.
+    const key = keyOf(j);
+    const others = [...new Set(queue.filter((q, p) => q.image.id !== imageId && keyOf(p) === key).map((q) => q.image.id))];
     if (others.length === 0) return out.slice(0, after + 1);
-    const spots = (id: number) => out.flatMap((q, i) => (q.image.id === id ? [i] : []));
+    const spots = (id: number) => out.flatMap((q, i) => (q.image.id === id && keyOf(i) === key ? [i] : []));
     let best = others[0];
     let bestDist = -1;
     for (const id of others) {
@@ -91,7 +100,9 @@ export class SessionMachine<H = number> {
 
   /** Изображение ушло в корзину: дальше по очереди его заменяет другое; если заменить нечем, расписание укорачивается. */
   replaceImage(imageId: number): void {
-    this._queue = dropImage(this._queue, imageId, this.step.workIndex);
+    const keys: string[] = [];
+    for (const s of this._steps) keys[s.workIndex] ??= categoryKey(s.categoryIds);
+    this._queue = dropImage(this._queue, imageId, this.step.workIndex, (pos) => keys[pos] ?? '');
     this._steps = this._steps.filter((s) => s.workIndex < this._queue.length);
   }
 
