@@ -27,14 +27,14 @@ export function ThumbDownIcon() {
 }
 
 /**
- * Выход: в покое — простая стрелка назад; при наведении стрелка гаснет, дверь и человечек
+ * Выход: в покое — простая стрелка (вправо, к двери); при наведении стрелка гаснет, дверь и человечек
  * прорисовываются линиями, и человечек уходит в дверь.
  */
 export function ExitArrowIcon() {
   const draw = { className: 'exit-draw', pathLength: 1 };
   return (
     <svg width="22.5" height="22.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path className="exit-arrow" d="M15 5l-7 7 7 7" />
+      <path className="exit-arrow" d="M9 5l7 7-7 7" />
       <g className="exit-art">
         <path {...draw} d="M14 3h6v18h-6" />
         <g className="exit-man">
