@@ -6,9 +6,9 @@ export function playChime(): void {
   tone(880, 0.15, 0.15, 0);
 }
 
-/** Предупреждение за 5 секунд до конца интервала: тихий низкий тон с мягкой атакой, не резкий. */
+/** Отсчёт последних 5 секунд интервала (звучит раз в секунду): тихий низкий тон с мягкой атакой, не резкий. */
 export function playWarning(): void {
-  tone(523, 0.07, 0.6, 0.04);
+  tone(523, 0.07, 0.45, 0.04);
 }
 
 function tone(freq: number, volume: number, durSec: number, attackSec: number): void {
