@@ -46,9 +46,11 @@ async function syncAndRename(root: string) {
 
 const WIN_WIDTH = 406;
 const WIN_MIN_HEIGHT = 560;
+// Высота по содержимому главного экрана: циферблат, кнопки и сообщение без пустого низа.
+const WIN_HEIGHT = 580;
 const WIN_MAX_HEIGHT = 10000;
 // Высота окна до входа в полноэкранный режим.
-let heightBeforeFullscreen = 760;
+let heightBeforeFullscreen = WIN_HEIGHT;
 
 function setFullscreen(on: boolean) {
   if (!win) return;
@@ -71,10 +73,10 @@ function setFullscreen(on: boolean) {
 function createWindow() {
   win = new BrowserWindow({
     width: 406,
-    height: 760,
+    height: WIN_HEIGHT,
     minWidth: 406,
     maxWidth: 406,
-    minHeight: 560,
+    minHeight: WIN_MIN_HEIGHT,
     frame: false,
     show: false,
     title: APP_NAME,

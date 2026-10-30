@@ -97,10 +97,18 @@ export const PresetEditor = forwardRef<EditorHandle, {
   const chain = useRef<Promise<boolean>>(Promise.resolve(true));
   const errors = validatePreset(draft);
   const groups = draft.groups;
+  // Новый этап добавлен: после отрисовки список плавно прокручивается к нему.
+  const reveal = useRef(false);
   const setGroups = (g: Group[], nextSel: number) => {
+    reveal.current = g.length > groups.length;
     setDraft({ ...draft, groups: g });
     setSel(Math.max(0, Math.min(nextSel, g.length - 1)));
   };
+  useEffect(() => {
+    if (!reveal.current) return;
+    reveal.current = false;
+    document.querySelector('.editor .ed-row.selected')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [sel, groups.length]);
   const setGroup = (i: number, patch: Partial<Group>) => setDraft({ ...draft, groups: groups.map((g, j) => (j === i ? { ...g, ...patch } : g)) });
 
   /** Сохраняет черновик (после предыдущего сохранения); при ошибках валидации ничего не пишет. */
@@ -151,6 +159,8 @@ export const PresetEditor = forwardRef<EditorHandle, {
         <button className="icon-btn" aria-label="Удалить этап" data-tip="Удалить" disabled={sel === 0 || groups.length <= 1} onClick={() => setGroups(removeGroup(groups, sel), sel)}><Icon name="trash" /></button>
         <button className="icon-btn ed-save" aria-label="Сохранить пресет" data-tip="Сохранить" disabled={errors.length > 0} onClick={() => void persist(draft)}><Icon name="save" /></button>
       </div>
+      {/* Этапы прокручиваются внутри редактора (без полосы), кнопки под ним остаются на месте. */}
+      <div className="ed-groups">
       {groups.map((g, i) => {
         const n = i + 1;
         // Строка подготовки (первая) без поля повторов, отдыха и своих категорий.
@@ -188,6 +198,7 @@ export const PresetEditor = forwardRef<EditorHandle, {
         );
       })}
       {errors.length > 0 && <ul className="errors ed-errors rise" style={rise(3 + groups.length)} role="alert">{errors.map((e) => <li key={e}>{e}</li>)}</ul>}
+      </div>
     </section>
   );
 });
