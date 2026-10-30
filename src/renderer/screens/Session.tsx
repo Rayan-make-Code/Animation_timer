@@ -10,13 +10,6 @@ import { errorText, useStore } from '../store';
 const ERROR_MS = 4000;
 const WARN_SEC = 5;
 
-/** Короткая анимация нажатия: класс снимается и ставится заново, чтобы анимация шла и при повторе. */
-function bump(el: HTMLElement | null): void {
-  if (!el) return;
-  el.classList.remove('bump');
-  void el.offsetWidth;
-  el.classList.add('bump');
-}
 
 /** Полноэкранная сессия: изображение, полоса прогресса, «шторка» со временем и панель кнопок. */
 export function Session() {
@@ -59,8 +52,8 @@ export function Session() {
       const step = m.step;
       const before = m.remainingMs;
       if (m.tick(now - last) > 0) playChime();
-      // За 5 секунд до конца интервала — мягкое предупреждение (только если интервал длиннее 5 секунд).
-      else if (m.step === step && step.sec > WARN_SEC && before > WARN_SEC * 1000 && m.remainingMs <= WARN_SEC * 1000) playWarning();
+      // С 5 секунд до конца интервала — мягкий сигнал каждую секунду (5, 4, 3, 2, 1), если интервал длиннее 5 секунд.
+      else if (m.step === step && step.sec > WARN_SEC && Math.ceil(m.remainingMs / 1000) < Math.ceil(before / 1000) && m.remainingMs <= WARN_SEC * 1000 && m.remainingMs > 0) playWarning();
       last = now;
       rerender();
     }, 100);
@@ -78,12 +71,13 @@ export function Session() {
     return () => clearTimeout(t);
   }, [error]);
 
-  const likeBtn = useRef<HTMLButtonElement>(null);
-  const dislikeBtn = useRef<HTMLButtonElement>(null);
+  // Анимация нажатия лайка/дизлайка: n меняет key, и анимация запускается заново даже при повторе.
+  const [fx, setFx] = useState<{ kind: 'like' | 'dislike'; n: number } | null>(null);
+  const play = useCallback((kind: 'like' | 'dislike') => setFx((f) => ({ kind, n: (f?.n ?? 0) + 1 })), []);
 
   const like = useCallback(async () => {
     if (leaving.current) return;
-    bump(likeBtn.current);
+    play('like');
     const id = m.currentImage.image.id;
     try {
       const next = await window.sketch.toggleRating(id, 1);
@@ -91,13 +85,13 @@ export function Session() {
     } catch (e) {
       setError(errorText(e));
     }
-  }, [m]);
+  }, [m, play]);
 
   /** Дизлайк: файл уходит в папку trash с «_del» в имени, сразу следующее изображение; при ошибке остаёмся на месте. */
   const dislike = useCallback(async () => {
     if (disliking.current || leaving.current) return;
     disliking.current = true;
-    bump(dislikeBtn.current);
+    play('dislike');
     const id = m.currentImage.image.id;
     try {
       await window.sketch.dislikeImage(id);
@@ -111,7 +105,7 @@ export function Session() {
     } finally {
       disliking.current = false;
     }
-  }, [m, rerender]);
+  }, [m, rerender, play]);
 
   const togglePause = useCallback(() => {
     if (leaving.current) return;
@@ -175,6 +169,11 @@ export function Session() {
           alt={image.fileName}
           onError={() => go('next')}
         />
+        {fx && (
+          <div key={fx.n} className={`stage-fx ${fx.kind}`} aria-hidden="true">
+            {fx.kind === 'like' ? <HeartIcon /> : <ThumbDownIcon />}
+          </div>
+        )}
       </div>
       <div className="session-dock">
         {error && <div className="session-error" role="alert">{error}</div>}
@@ -185,8 +184,8 @@ export function Session() {
           </button>
           <button className="s-btn" aria-label="Следующее изображение" data-tip="Следующий (→)" onClick={() => go('next')}><ForwardIcon /></button>
           <span className="session-count" aria-label="Нарисовано">{done}/{total}</span>
-          <button ref={likeBtn} className={`s-btn like${liked ? ' on' : ''}`} aria-label="Лайк" aria-pressed={liked} data-tip="Нравится (L)" onClick={() => void like()}><HeartIcon /></button>
-          <button ref={dislikeBtn} className="s-btn dislike" aria-label="Дизлайк: убрать из сессий" data-tip="В trash (D)" onClick={() => void dislike()}><ThumbDownIcon /></button>
+          <button className={`s-btn like${liked ? ' on' : ''}`} aria-label="Лайк" aria-pressed={liked} data-tip="Нравится (L)" onClick={() => void like()}><span key={fx?.kind === 'like' ? fx.n : 0} className={`fx-icon${fx?.kind === 'like' ? ' bump' : ''}`}><HeartIcon /></span></button>
+          <button className="s-btn dislike" aria-label="Дизлайк: убрать из сессий" data-tip="В trash (D)" onClick={() => void dislike()}><span key={fx?.kind === 'dislike' ? fx.n : 0} className={`fx-icon${fx?.kind === 'dislike' ? ' bump' : ''}`}><ThumbDownIcon /></span></button>
           <button className="s-btn" aria-label="Выйти из сессии" data-tip="Выйти (Esc)" onClick={() => void leave(false)}><ExitArrowIcon /></button>
         </div>
       </div>

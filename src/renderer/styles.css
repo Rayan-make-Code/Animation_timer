@@ -74,7 +74,7 @@ button.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background
 button.icon-btn:hover:not(:disabled) { color: var(--text); background: transparent; }
 .icon-btn.on { color: var(--text); }
 /* Изменить и удалить пресет — соразмерно кнопке «Старт». */
-.icon-btn.boxed { width: 44px; height: 44px; align-self: center; }
+.icon-btn.boxed { width: 35px; height: 35px; align-self: center; }
 .icon-btn.danger { color: var(--fix); }
 button.icon-btn.danger:hover:not(:disabled) { color: var(--fix); }
 
@@ -173,7 +173,7 @@ button.icon-btn.danger:hover:not(:disabled) { color: var(--fix); }
 .start-sub { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .start-sub.done { color: var(--done); }
 .start > .btn { align-self: center; }
-.start-btn { width: 44px; height: 44px; align-self: center; color: var(--work); }
+.start-btn { width: 35px; height: 35px; align-self: center; color: var(--work); }
 
 .notice { flex: none; display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 6px 6px 6px 10px; border: 1px solid var(--work-line); background: var(--work-bg); color: var(--work); border-radius: 5.5px; font-size: 12.5px; }
 .notice .icon-btn { color: var(--work); }
@@ -213,11 +213,19 @@ button.s-btn:hover:not(:disabled) { color: var(--text); background: transparent;
 /* Иконки без рамок: фокус с клавиатуры показывается цветом, а не квадратной обводкой. */
 .s-btn:focus-visible, .icon-btn:focus-visible { outline: none; color: var(--text); }
 .s-btn.dislike, button.s-btn.dislike:hover:not(:disabled) { color: var(--fix); }
-/* Нажатие лайка: сердце «бьётся»; дизлайка: палец кивает вниз. */
-.s-btn.like.bump svg { animation: like-pop .45s var(--hover-ease); }
-.s-btn.dislike.bump svg { animation: dislike-nod .45s var(--hover-ease); }
-@keyframes like-pop { 0% { transform: scale(1); } 35% { transform: scale(1.35); } 60% { transform: scale(.92); } 100% { transform: scale(1); } }
-@keyframes dislike-nod { 0% { transform: none; } 35% { transform: translateY(4px) rotate(-12deg); } 65% { transform: translateY(-1px) rotate(4deg); } 100% { transform: none; } }
+/* Нажатие лайка и дизлайка: значок на кнопке подпрыгивает, а в центре изображения вспыхивает крупный знак и тает. */
+.fx-icon { display: grid; place-items: center; }
+.s-btn.like .fx-icon.bump { animation: like-pop .5s var(--hover-ease); }
+.s-btn.dislike .fx-icon.bump { animation: dislike-nod .5s var(--hover-ease); }
+.stage-fx { position: absolute; inset: 0 var(--frame-w) var(--frame-b); display: grid; place-items: center; pointer-events: none; z-index: 1; }
+.stage-fx svg { width: 120px; height: 120px; stroke-width: 1.4; animation: fx-burst .8s var(--hover-ease) forwards; }
+.stage-fx.like { color: var(--done); }
+.stage-fx.dislike { color: var(--fix); }
+.stage-fx.like svg { fill: currentColor; fill-opacity: .35; filter: drop-shadow(0 0 3px rgba(0, 0, 0, .9)) drop-shadow(0 0 14px var(--done)); }
+.stage-fx.dislike svg { filter: drop-shadow(0 0 3px rgba(0, 0, 0, .9)) drop-shadow(0 0 14px var(--fix)); }
+@keyframes like-pop { 0% { transform: scale(1); } 30% { transform: scale(1.6); } 55% { transform: scale(.85); } 75% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@keyframes dislike-nod { 0% { transform: none; } 25% { transform: translateY(6px) rotate(-18deg) scale(1.3); } 50% { transform: translateY(-2px) rotate(10deg); } 75% { transform: rotate(-5deg); } 100% { transform: none; } }
+@keyframes fx-burst { 0% { transform: scale(.4); opacity: 0; } 25% { transform: scale(1.15); opacity: 1; } 45% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
 /* Выход: стрелка → прорисовка двери и человечка → человечек уходит в дверь. */
 .exit-arrow, .exit-art { transition: opacity .15s; }
 .exit-art { opacity: 0; }
@@ -229,6 +237,7 @@ button.s-btn:hover:not(:disabled) { color: var(--text); background: transparent;
 @keyframes exit-draw { to { stroke-dashoffset: 0; } }
 @keyframes exit-walk { 0% { transform: none; opacity: 1; } 70% { opacity: 1; } 100% { transform: translateX(7px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .session-progress-fill, .s-btn:hover .exit-draw, .s-btn:hover .exit-man, .s-btn.bump svg { animation: none; }
+  .session-progress-fill, .s-btn:hover .exit-draw, .s-btn:hover .exit-man, .fx-icon.bump, .stage-fx svg { animation: none; }
+  .stage-fx { display: none; }
   .s-btn:hover .exit-draw { stroke-dashoffset: 0; }
 }
