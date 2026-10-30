@@ -74,8 +74,8 @@ export function StartBar({ preset, onEdit, onDelete }: { preset: Preset | null; 
               <button className="icon-btn boxed danger" aria-label="Удалить пресет" data-tip="Удалить пресет" onClick={() => setConfirmDelete(true)}><Icon name="trash" /></button>
             </>
           )}
-          <button className="btn btn-primary start-btn" aria-disabled={blocked ? true : undefined} data-tip={blocked ?? undefined} onClick={() => void start()}>
-            <PlayIcon />Старт
+          <button className="icon-btn boxed start-btn" aria-label="Старт" aria-disabled={blocked ? true : undefined} data-tip={blocked ?? 'Старт'} onClick={() => void start()}>
+            <PlayIcon />
           </button>
         </>
       )}

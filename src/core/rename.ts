@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Db } from './db';
+import { isDislikedName } from './dislike';
 
 export interface RenamePlanItem { from: string; to: string }
 export interface RenameReport { renamed: number; failed: { path: string; error: string }[] }
@@ -29,7 +30,8 @@ export function planRenames(dir: string, files: string[], existing: string[]): R
     if (m) max = Math.max(max, Number(m[1]));
   }
   return files
-    .filter((f) => !re.test(f))
+    // Файлы с пометкой дизлайка («_del») сохраняют имя.
+    .filter((f) => !re.test(f) && !isDislikedName(f))
     .map((from) => ({ from, to: `${dir}_img_${pad(++max)}${extOf(from)}` }));
 }
 
@@ -53,7 +55,7 @@ export async function renameNewImages(db: Db, root: string): Promise<RenameRepor
     const dirPath = path.join(root, ...cat.rel_path.split('/'));
     const images = rows.all(cat.id) as { id: number; file_name: string }[];
     const re = templateRe(cat.name);
-    if (images.every((i) => re.test(i.file_name))) continue;
+    if (images.every((i) => re.test(i.file_name) || isDislikedName(i.file_name))) continue;
 
     let onDisk: string[];
     try {

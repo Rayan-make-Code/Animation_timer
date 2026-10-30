@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { launch, makeLibrary, png, query, tempRoot } from './helpers';
+import { choosePresetCategory, launch, makeLibrary, png, query, tempRoot } from './helpers';
 
 test('first run shows the 1 h default preset and opens the editor on click', async () => {
   const { app, win } = await launch();
@@ -18,11 +18,11 @@ test('during the first run the library panel is open by default', async () => {
   await app.close();
 });
 
-test('after the first session start the panel is hidden and a preset click shows the dial', async () => {
+test('after the first session start the footer is collapsed and a preset click shows the editor, then the dial', async () => {
   const first = await launch(undefined, makeLibrary());
   await first.win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
-  // Категории принадлежат пресету: выбранный по умолчанию «1 ч» получает «Позы».
-  await first.win.getByRole('group', { name: 'Категории' }).getByRole('button', { name: 'Позы', exact: true }).click();
+  // Категории принадлежат пресету: выбираем их в редакторе «1 ч».
+  await choosePresetCategory(first.win, /^1 ч/, 'Позы');
   await first.win.getByRole('button', { name: 'Старт', exact: true }).click();
   await expect(first.win.getByRole('progressbar', { name: 'Прогресс сессии' })).toBeVisible();
   await expect.poll(() => query<{ value: string }>(first.dataDir, "select value from settings where key = 'firstRunDone'")[0]?.value).toBe('1');
@@ -32,11 +32,15 @@ test('after the first session start the panel is hidden and a preset click shows
 
   const { app, win } = await launch(first.dataDir);
   await expect(win.getByRole('button', { name: /^1 ч/ })).toBeVisible();
+  // Подвал свёрнут до шестерёнки: ни панели, ни пути к папке.
   await expect(win.getByRole('toolbar', { name: 'Библиотека' })).toHaveCount(0);
-  // Выбор пресета сразу открывает редактор; нажатие на общий блок категорий сохраняет и показывает циферблат.
+  await expect(win.getByRole('button', { name: 'Сменить папку библиотеки' })).toHaveCount(0);
+  await win.getByRole('button', { name: 'Меню библиотеки' }).click();
+  await expect(win.getByRole('button', { name: 'Сменить папку библиотеки' })).toBeVisible();
+  // Выбор пресета сразу открывает редактор; нажатие вне редактора сохраняет и показывает циферблат.
   await win.getByRole('button', { name: /^1 ч/ }).click();
   await expect(win.getByRole('textbox', { name: 'Название' })).toHaveValue('1 ч');
-  await win.getByRole('group', { name: 'Категории', exact: true }).getByRole('button', { name: 'Позы', exact: true }).click();
+  await win.locator('.start-text').click();
   await expect(win.getByRole('region', { name: 'Циферблат пресета' })).toBeVisible();
   await expect(win.getByRole('textbox', { name: 'Название' })).toHaveCount(0);
   await app.close();
@@ -52,35 +56,40 @@ test('editing autosaves when the user moves to the next field, and preparation h
   // Переход в следующее поле сохраняет название, кнопок «Сохранить» и «Отмена» нет.
   await win.getByRole('textbox', { name: 'Описание' }).focus();
   await expect.poll(() => query<{ name: string }>(dataDir, "select name from presets where name = 'Час 2'")).toHaveLength(1);
-  await expect(win.getByRole('button', { name: 'Сохранить' })).toHaveCount(0);
-  await expect(win.getByRole('button', { name: 'Отмена' })).toHaveCount(0);
+  await expect(win.getByRole('button', { name: 'Сохранить', exact: true })).toHaveCount(0);
+  await expect(win.getByRole('button', { name: 'Отмена', exact: true })).toHaveCount(0);
   await app.close();
 });
 
-test('a category chosen in the editor is kept by the preset, and the shared categories open the dial', async () => {
-  const lib = makeLibrary();
-  const { app, win, dataDir } = await launch(undefined, lib);
+test('clicking a category in the editor keeps the editor open; leaving it saves and shows the dial', async () => {
+  const { app, win, dataDir } = await launch(undefined, makeLibrary());
   await win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
   await win.getByRole('button', { name: /^1 ч/ }).click();
-  await win.getByRole('group', { name: 'Категории пресета' }).getByRole('button', { name: 'Позы', exact: true }).click();
-  await expect.poll(() => query<{ c: string }>(dataDir, "select category_ids as c from presets where name = '1 ч'")[0]?.c).not.toBe('[]');
-  await win.getByRole('group', { name: 'Категории', exact: true }).getByRole('button', { name: 'Лица', exact: true }).click();
+  const cats = win.getByRole('group', { name: 'Категории пресета' });
+  await cats.getByRole('button', { name: 'Позы', exact: true }).click();
+  await cats.getByRole('button', { name: 'Лица', exact: true }).click();
+  await expect(cats.getByRole('button', { name: 'Позы', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(win.getByRole('textbox', { name: 'Название' })).toBeVisible();
+  await win.locator('.start-text').click();
   await expect(win.getByRole('region', { name: 'Циферблат пресета' })).toBeVisible();
+  await expect.poll(() => JSON.parse(query<{ c: string }>(dataDir, "select category_ids as c from presets where name = '1 ч'")[0].c).length).toBe(2);
   await app.close();
 });
 
-test('connecting a library shows category tags, all off', async () => {
+test('connecting a library makes every folder a category, all off, and Старт waits for one', async () => {
   const lib = makeLibrary();
   const { app, win } = await launch(undefined, lib);
   await win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
-  await expect(win.getByRole('status')).toContainText('Новых изображений: 4');
+  await expect(win.getByRole('status')).toHaveText(/Библиотека: новых 4, переименовано 4/);
   expect(fs.readdirSync(path.join(lib, 'Позы')).sort()).toEqual(['anim.gif', 'Позы_img_01.png', 'Позы_img_02.png', 'Позы_img_03.png']);
-  const tags = win.getByRole('group', { name: 'Категории' });
-  for (const name of ['Позы', 'Лица', 'Мужские']) await expect(tags.getByRole('button', { name, exact: true })).toHaveAttribute('aria-pressed', 'false');
   const start = win.getByRole('button', { name: 'Старт', exact: true });
   await expect(start).toBeDisabled();
-  await tags.getByRole('button', { name: 'Позы', exact: true }).click();
-  await expect(tags.getByRole('button', { name: 'Позы', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(start).toHaveAttribute('data-tip', 'Выберите категории для пресета или отдельного этапа');
+  await win.getByRole('button', { name: /^1 ч/ }).click();
+  const cats = win.getByRole('group', { name: 'Категории пресета' });
+  for (const name of ['Позы', 'Лица', 'Мужские']) await expect(cats.getByRole('button', { name, exact: true })).toHaveAttribute('aria-pressed', 'false');
+  await win.locator('.start-text').click();
+  await choosePresetCategory(win, /^1 ч/, 'Позы');
   await expect(start).toBeEnabled();
   await app.close();
 });
@@ -118,8 +127,9 @@ test('an image lying directly in the chosen folder is indexed and renamed after 
   fs.writeFileSync(path.join(root, 'madara_1.png'), png(20, 20, 200));
   const { app, win } = await launch(undefined, root);
   await win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
-  await expect(win.getByRole('group', { name: 'Категории' }).getByRole('button', { name: 'image', exact: true })).toBeVisible();
-  expect(fs.readdirSync(root)).toEqual(['image_img_01.png']);
+  await expect.poll(() => fs.readdirSync(root)).toEqual(['image_img_01.png']);
+  await win.getByRole('button', { name: /^1 ч/ }).click();
+  await expect(win.getByRole('group', { name: 'Категории пресета' }).getByRole('button', { name: 'image', exact: true })).toBeVisible();
   await app.close();
 });
 
@@ -127,15 +137,12 @@ test('a preset whose categories have no images left cannot start, with a message
   const lib = makeLibrary();
   const first = await launch(undefined, lib);
   await first.win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
-  await first.win.getByRole('group', { name: 'Категории' }).getByRole('button', { name: 'Позы', exact: true }).click();
+  await choosePresetCategory(first.win, /^1 ч/, 'Позы');
   await first.app.close();
 
   // Все изображения «Позы» пропали с диска.
   query(first.dataDir, "update images set missing = 1 where rel_path like 'Позы/%'");
   const { app, win } = await launch(first.dataDir);
-  const tags = win.getByRole('group', { name: 'Категории', exact: true });
-  await expect(tags.getByRole('button', { name: 'Лица', exact: true })).toBeVisible();
-  await expect(tags.getByRole('button', { name: 'Позы', exact: true })).toHaveCount(0);
   const start = win.getByRole('button', { name: 'Старт', exact: true });
   await expect(start).toBeDisabled();
   await expect(start).toHaveAttribute('data-tip', 'В выбранных категориях нет изображений');

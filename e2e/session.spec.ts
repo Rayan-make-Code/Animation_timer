@@ -1,33 +1,36 @@
 import { expect, test, type Page } from '@playwright/test';
 import fs from 'node:fs';
 import path from 'node:path';
-import { launch, makeLibrary, query, tempRoot } from './helpers';
+import { launch, makeLibrary, query } from './helpers';
 
-/** Запуск сессии через главный экран: пресет «Тест», тег «Позы» для его категорий, «Старт». */
-async function prepare(durationSec: number, repeats: number, opts: { restSec?: number; trash?: string; dblclick?: boolean } = {}) {
-  const trash = opts.trash ?? path.join(tempRoot(), 'trash');
-  const run = await launch(undefined, makeLibrary(), { SKETCH_FAKE_TRASH: trash });
+/** Запуск сессии через главный экран: пресет «Тест» с категорией «Позы», «Старт». */
+async function prepare(durationSec: number, repeats: number, opts: { restSec?: number; dblclick?: boolean } = {}) {
+  const lib = makeLibrary();
+  const run = await launch(undefined, lib);
   const { win } = run;
   await win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
-  const id = await win.evaluate(([sec, rep, rest]) => window.sketch.savePreset({
-    name: 'Тест', description: '', groups: [{ repeats: rep, workLabel: 'Наброски', workSec: sec, restSec: rest }],
-  }), [durationSec, repeats, opts.restSec ?? 0]);
+  const id = await win.evaluate(async ([sec, rep, rest]) => {
+    const poses = (await window.sketch.getTree()).find((n) => n.name === 'Позы')!.id;
+    return window.sketch.savePreset({
+      name: 'Тест', description: '', categoryIds: [poses], groups: [{ repeats: rep, workLabel: 'Наброски', workSec: sec, restSec: rest }],
+    });
+  }, [durationSec, repeats, opts.restSec ?? 0]);
   await win.evaluate((presetId) => window.sketch.saveSettings({ selectedPreset: presetId }), id);
   // Перезагрузка подхватывает новый пресет и выбор.
   await win.reload();
   await win.waitForSelector('.app');
   await expect(win.getByRole('button', { name: /^Тест/ })).toHaveAttribute('aria-pressed', 'true');
-  // Категории принадлежат пресету: тег «Позы» выбирает их для «Тест».
-  const tags = win.getByRole('group', { name: 'Категории', exact: true });
-  await tags.getByRole('button', { name: 'Позы', exact: true }).click();
-  await expect(tags.getByRole('button', { name: 'Позы', exact: true })).toHaveAttribute('aria-pressed', 'true');
   const startBounds = await run.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getBounds());
   const start = win.getByRole('button', { name: 'Старт', exact: true });
+  await expect(start).toBeEnabled();
   if (opts.dblclick) await start.dblclick();
   else await start.click();
   await expect(win.getByRole('progressbar', { name: 'Прогресс сессии' })).toBeVisible();
-  return { ...run, trash, startBounds };
+  return { ...run, lib, startBounds };
 }
+
+/** Файлы «Позы» с пометкой дизлайка. */
+const marked = (lib: string) => fs.readdirSync(path.join(lib, 'Позы')).filter((n) => /_del\d*\./.test(n));
 
 const time = (win: Page) => win.locator('.session-time');
 const image = (win: Page) => win.locator('.stage-img');
@@ -78,13 +81,13 @@ test('L likes and pressing again removes the like', async () => {
   await app.close();
 });
 
-test('D moves the file to the recycle bin and shows the next image', async () => {
-  const { app, win, dataDir, trash } = await prepare(60, 3);
+test('D marks the file with _del, keeps it on disk and shows the next image', async () => {
+  const { app, win, dataDir, lib } = await prepare(60, 3);
   const first = await image(win).getAttribute('src');
   await win.keyboard.press('d');
   await expect(image(win)).not.toHaveAttribute('src', first!);
-  expect(fs.readdirSync(trash)).toHaveLength(1);
-  expect(query<{ c: number }>(dataDir, 'select count(*) as c from images where missing = 1')[0].c).toBe(1);
+  expect(marked(lib)).toHaveLength(1);
+  expect(query<{ c: number }>(dataDir, "select count(*) as c from images where rating = -1 and file_name like '%\\_del%' escape '\\'")[0].c).toBe(1);
   await expect(win.getByRole('progressbar', { name: 'Прогресс сессии' })).toBeVisible();
   await app.close();
 });
@@ -104,24 +107,24 @@ test('a disliked image does not come back later in the same session', async () =
   await app.close();
 });
 
-test('D on the last image trashes it and finishes the session', async () => {
-  const { app, win, trash } = await prepare(60, 1);
-  await win.getByRole('button', { name: 'Дизлайк: переместить в корзину' }).click();
+test('D on the last image marks it and finishes the session', async () => {
+  const { app, win, lib } = await prepare(60, 1);
+  await win.getByRole('button', { name: 'Дизлайк: убрать из сессий' }).click();
   await expect(win.getByText('Сессия завершена: 0 рис.')).toBeVisible();
-  expect(fs.readdirSync(trash)).toHaveLength(1);
+  expect(marked(lib)).toHaveLength(1);
   await app.close();
 });
 
-test('a failed move to the recycle bin shows an error and keeps the image', async () => {
-  // Вместо папки корзины — файл: перенос не удастся.
-  const trash = path.join(tempRoot(), 'not-a-folder');
-  fs.writeFileSync(trash, '');
-  const { app, win, dataDir } = await prepare(60, 3, { trash });
+test('a failed rename shows an error and keeps the image', async () => {
+  const { app, win, dataDir, lib } = await prepare(60, 3);
   const first = await image(win).getAttribute('src');
+  // Файл текущего изображения пропал с диска: переименовать его не получится.
+  const rel = query<{ rel: string }>(dataDir, `select rel_path as rel from images where id = ${Number(first!.split('/').pop())}`)[0].rel;
+  fs.rmSync(path.join(lib, ...rel.split('/')));
   await win.keyboard.press('d');
-  await expect(win.getByRole('alert')).toContainText('Не удалось переместить в корзину');
+  await expect(win.getByRole('alert')).toContainText('Не удалось пометить файл');
   await expect(image(win)).toHaveAttribute('src', first!);
-  expect(query<{ c: number }>(dataDir, 'select count(*) as c from images where missing = 1')[0].c).toBe(0);
+  expect(query<{ c: number }>(dataDir, 'select count(*) as c from images where rating = -1')[0].c).toBe(0);
   await expect(win.getByRole('alert')).toHaveCount(0, { timeout: 8_000 });
   await app.close();
 });
@@ -141,8 +144,8 @@ test('Escape leaves immediately and returns to the main screen', async () => {
   await app.close();
 });
 
-test('keys pressed while leaving are ignored: Escape then D trashes nothing', async () => {
-  const { app, win, dataDir, trash } = await prepare(60, 3);
+test('keys pressed while leaving are ignored: Escape then D marks nothing', async () => {
+  const { app, win, dataDir, lib } = await prepare(60, 3);
   // Выход из полноэкранного режима затягивается, чтобы D пришла, пока сессия закрывается.
   await app.evaluate(({ ipcMain, BrowserWindow }) => {
     ipcMain.removeHandler('sketch:window:fullscreen');
@@ -156,8 +159,8 @@ test('keys pressed while leaving are ignored: Escape then D trashes nothing', as
   await win.keyboard.press('ArrowRight');
   await expect(win.getByRole('button', { name: 'Старт', exact: true })).toBeVisible();
   await win.waitForTimeout(500);
-  expect(fs.existsSync(trash) ? fs.readdirSync(trash) : []).toHaveLength(0);
-  expect(query<{ c: number }>(dataDir, 'select count(*) as c from images where missing = 1')[0].c).toBe(0);
+  expect(marked(lib)).toHaveLength(0);
+  expect(query<{ c: number }>(dataDir, 'select count(*) as c from images where rating = -1')[0].c).toBe(0);
   await app.close();
 });
 
