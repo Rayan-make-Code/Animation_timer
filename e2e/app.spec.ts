@@ -37,10 +37,10 @@ test('after the first session start the footer is collapsed and a preset click s
   await expect(win.getByRole('button', { name: 'Сменить папку библиотеки' })).toHaveCount(0);
   await win.getByRole('button', { name: 'Меню библиотеки' }).click();
   await expect(win.getByRole('button', { name: 'Сменить папку библиотеки' })).toBeVisible();
-  // Выбор пресета сразу открывает редактор; нажатие вне редактора сохраняет и показывает циферблат.
+  // Выбор пресета сразу открывает редактор; стрелка «назад» сохраняет и показывает циферблат.
   await win.getByRole('button', { name: /^1 ч/ }).click();
   await expect(win.getByRole('textbox', { name: 'Название' })).toHaveValue('1 ч');
-  await win.locator('.start-text').click();
+  await win.getByRole('button', { name: 'Назад к циферблату' }).click();
   await expect(win.getByRole('region', { name: 'Циферблат пресета' })).toBeVisible();
   await expect(win.getByRole('textbox', { name: 'Название' })).toHaveCount(0);
   await app.close();
@@ -61,7 +61,7 @@ test('editing autosaves when the user moves to the next field, and preparation h
   await app.close();
 });
 
-test('clicking a category in the editor keeps the editor open; leaving it saves and shows the dial', async () => {
+test('clicking a category in the editor keeps the editor open; the back arrow saves and shows the dial', async () => {
   const { app, win, dataDir } = await launch(undefined, makeLibrary());
   await win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
   await win.getByRole('button', { name: /^1 ч/ }).click();
@@ -70,7 +70,7 @@ test('clicking a category in the editor keeps the editor open; leaving it saves 
   await cats.getByRole('button', { name: 'Лица', exact: true }).click();
   await expect(cats.getByRole('button', { name: 'Позы', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(win.getByRole('textbox', { name: 'Название' })).toBeVisible();
-  await win.locator('.start-text').click();
+  await win.getByRole('button', { name: 'Назад к циферблату' }).click();
   await expect(win.getByRole('region', { name: 'Циферблат пресета' })).toBeVisible();
   await expect.poll(() => JSON.parse(query<{ c: string }>(dataDir, "select category_ids as c from presets where name = '1 ч'")[0].c).length).toBe(2);
   await app.close();
@@ -88,7 +88,7 @@ test('connecting a library makes every folder a category, all off, and Стар�
   await win.getByRole('button', { name: /^1 ч/ }).click();
   const cats = win.getByRole('group', { name: 'Категории пресета' });
   for (const name of ['Позы', 'Лица', 'Мужские']) await expect(cats.getByRole('button', { name, exact: true })).toHaveAttribute('aria-pressed', 'false');
-  await win.locator('.start-text').click();
+  await win.getByRole('button', { name: 'Назад к циферблату' }).click();
   await choosePresetCategory(win, /^1 ч/, 'Позы');
   await expect(start).toBeEnabled();
   await app.close();
@@ -146,5 +146,26 @@ test('a preset whose categories have no images left cannot start, with a message
   const start = win.getByRole('button', { name: 'Старт', exact: true });
   await expect(start).toBeDisabled();
   await expect(start).toHaveAttribute('data-tip', 'В выбранных категориях нет изображений');
+  await app.close();
+});
+
+test('one click on Старт saves the open editor and starts the session', async () => {
+  const { app, win } = await launch(undefined, makeLibrary());
+  await win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
+  await win.getByRole('button', { name: /^1 ч/ }).click();
+  await win.getByRole('group', { name: 'Категории пресета' }).getByRole('button', { name: 'Позы', exact: true }).click();
+  // Категория ещё не сохранена, поэтому кнопка выглядит недоступной, но нажать её можно: старт сначала сохраняет редактор.
+  await win.getByRole('button', { name: 'Старт', exact: true }).click({ force: true });
+  await expect(win.getByRole('progressbar', { name: 'Прогресс сессии' })).toBeVisible();
+  await app.close();
+});
+
+test('seconds typed as digits turn into m:ss when the field is left', async () => {
+  const { app, win } = await launch();
+  await win.getByRole('button', { name: /^1 ч/ }).click();
+  const work = win.getByRole('textbox', { name: 'Этап 2: работа' });
+  await work.fill('90');
+  await win.getByRole('textbox', { name: 'Описание' }).focus();
+  await expect(work).toHaveValue('1:30');
   await app.close();
 });

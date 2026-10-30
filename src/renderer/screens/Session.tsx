@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { imageUrl } from '../../shared/api';
 import { expandPreset, SessionMachine } from '../../core/timer';
 import { mmss } from '../../core/dial';
-import { BackIcon, ExitIcon, ForwardIcon, HeartIcon, PauseIcon, PlayIcon, UrnIcon } from '../icons';
+import { BackIcon, ExitArrowIcon, ForwardIcon, HeartIcon, PauseIcon, PlayIcon, ThumbDownIcon } from '../icons';
 import { playChime } from '../sound';
 import { errorText, useStore } from '../store';
 
@@ -135,24 +135,28 @@ export function Session() {
   const image = m.currentImage.image;
   const liked = (ratings[image.id] ?? image.rating) === 1;
   const phase = m.step.kind;
+  // Доля текущего рисунка: полоса заполняется плавно, пока идёт рабочий этап.
+  const current = phase === 'work' ? 1 - m.remainingMs / (m.step.sec * 1000) : 0;
   const paused = m.state === 'paused';
 
   return (
     <div className="session">
-      <img
-        key={image.id}
-        className={`stage-img${phase === 'rest' ? ' dim' : ''}`}
-        src={imageUrl(image.id)}
-        alt={image.fileName}
-        onError={() => go('next')}
-      />
-      <div className="session-progress" role="progressbar" aria-label="Прогресс сессии" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
-        <div className="session-progress-fill" style={{ width: `${total ? (done / total) * 100 : 0}%` }} />
-      </div>
-      <div className="session-strip">
-        <span className={`phase-dot ${phase}`} aria-hidden="true" />
-        <span className="session-time">{mmss(Math.ceil(m.remainingMs / 1000))}</span>
-        <span className="session-count">{done}/{total}</span>
+      <header className="session-head">
+        <div className="session-progress" role="progressbar" aria-label="Прогресс сессии" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>
+          <div className="session-progress-fill" style={{ width: `${total ? (Math.min(done + current, total) / total) * 100 : 0}%` }} />
+        </div>
+        <div className="session-strip">
+          <span className="session-time">{mmss(Math.ceil(m.remainingMs / 1000))}</span>
+        </div>
+      </header>
+      <div className="stage">
+        <img
+          key={image.id}
+          className={`stage-img${phase === 'rest' ? ' dim' : ''}`}
+          src={imageUrl(image.id)}
+          alt={image.fileName}
+          onError={() => go('next')}
+        />
       </div>
       <div className="session-dock">
         {error && <div className="session-error" role="alert">{error}</div>}
@@ -162,9 +166,10 @@ export function Session() {
             {paused ? <PlayIcon /> : <PauseIcon />}
           </button>
           <button className="s-btn" aria-label="Следующее изображение" data-tip="Вперёд (→)" onClick={() => go('next')}><ForwardIcon /></button>
-          <button className={`s-btn like${liked ? ' on' : ''}`} aria-label="Лайк" aria-pressed={liked} data-tip="Лайк (L)" onClick={() => void like()}><HeartIcon filled={liked} /></button>
-          <button className="s-btn dislike" aria-label="Дизлайк: убрать из сессий" data-tip="Дизлайк: пометить файл _del (D)" onClick={() => void dislike()}><UrnIcon /></button>
-          <button className="s-btn" aria-label="Выйти из сессии" data-tip="Выйти (Esc)" onClick={() => void leave(false)}><ExitIcon /></button>
+          <span className="session-count" aria-label="Нарисовано">{done}/{total}</span>
+          <button className={`s-btn like${liked ? ' on' : ''}`} aria-label="Лайк" aria-pressed={liked} data-tip="Лайк (L)" onClick={() => void like()}><HeartIcon /></button>
+          <button className="s-btn dislike" aria-label="Дизлайк: убрать из сессий" data-tip="Дизлайк: пометить файл _del (D)" onClick={() => void dislike()}><ThumbDownIcon /></button>
+          <button className="s-btn" aria-label="Выйти из сессии" data-tip="Выйти (Esc)" onClick={() => void leave(false)}><ExitArrowIcon /></button>
         </div>
       </div>
     </div>

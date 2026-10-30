@@ -48,9 +48,14 @@ function MmssInput({ value, label, onChange }: { value: number; label: string; o
     if (!Number.isNaN(value) && parseMmss(text) !== value) setText(mmss(value));
   }, [value]);
   const bad = parseMmss(text) === null;
+  // Секунды, введённые цифрами («90»), при уходе из поля показываются как «1:30».
+  const tidy = () => {
+    const sec = parseMmss(text);
+    if (sec !== null) setText(mmss(sec));
+  };
   return (
     <input className={`mmss${bad ? ' bad' : ''}`} aria-label={label} aria-invalid={bad} value={text} inputMode="numeric"
-      onChange={(e) => { setText(e.target.value); onChange(parseMmss(e.target.value) ?? NaN); }} />
+      onBlur={tidy} onChange={(e) => { setText(e.target.value); onChange(parseMmss(e.target.value) ?? NaN); }} />
   );
 }
 
@@ -70,7 +75,9 @@ export const PresetEditor = forwardRef<EditorHandle, {
   tags: CategoryTag[];
   /** Возвращает id сохранённого пресета или null при ошибке. */
   onSave: (p: NewPreset, id?: number) => Promise<number | null>;
-}>(function PresetEditor({ presetId, initial, tags, onSave }, ref) {
+  /** Стрелка «назад»: сохранить и вернуть циферблат. */
+  onBack: () => void;
+}>(function PresetEditor({ presetId, initial, tags, onSave, onBack }, ref) {
   const [draft, setDraft] = useState<NewPreset>(() => ({ ...initial, categoryIds: initial.categoryIds ?? [], groups: withPrepare(initial.groups) }));
   const [sel, setSel] = useState(0);
   const idRef = useRef(presetId);
@@ -118,6 +125,9 @@ export const PresetEditor = forwardRef<EditorHandle, {
 
   return (
     <section className="editor swap" aria-label="Редактирование пресета" onBlur={onBlur}>
+      <div className="ed-head">
+        <button className="icon-btn" aria-label="Назад к циферблату" data-tip="Назад к циферблату" onClick={onBack}><Icon name="back" size={16} /></button>
+      </div>
       <div className="ed-fields rise" style={rise(0)}>
         <label>Название<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
         <label className="wide">Описание<input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} /></label>

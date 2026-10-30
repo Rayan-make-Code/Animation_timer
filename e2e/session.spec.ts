@@ -9,6 +9,8 @@ async function prepare(durationSec: number, repeats: number, opts: { restSec?: n
   const run = await launch(undefined, lib);
   const { win } = run;
   await win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
+  // Дерево категорий готово только после сводки синхронизации.
+  await expect(win.getByRole('status')).toContainText('Библиотека:');
   const id = await win.evaluate(async ([sec, rep, rest]) => {
     const poses = (await window.sketch.getTree()).find((n) => n.name === 'Позы')!.id;
     return window.sketch.savePreset({

@@ -33,6 +33,12 @@ export function Main() {
     selectPreset(p.id);
     setEditing(editOf(p));
   };
+  /** Сохраняет черновик и возвращает циферблат; при ошибке редактор остаётся открытым. */
+  const back = async (): Promise<boolean> => {
+    const ok = await commit();
+    if (ok) setEditing(null);
+    return ok;
+  };
   const newPreset = async () => {
     if (!(await commit())) return;
     setEditing({ initial: blankPreset(), key: ++editKey });
@@ -71,12 +77,12 @@ export function Main() {
   return (
     <>
       <main className="main" onPointerDownCapture={(e) => {
-        // Нажатие вне редактора и ряда пресетов сохраняет черновик и возвращает циферблат.
-        if (editing && !(e.target as Element).closest('.editor, .preset-row')) void commit().then((ok) => ok && setEditing(null));
+        // Нажатие вне редактора и ряда пресетов только сохраняет черновик; к циферблату ведёт стрелка «назад».
+        if (editing && !(e.target as Element).closest('.editor, .preset-row, .start')) void commit();
       }}>
         <PresetRow presets={list} selectedId={selectedPresetId} onPick={(p) => void pick(p)} onNew={() => void newPreset()} />
         {editing ? (
-          <PresetEditor key={editing.key} ref={editorRef} presetId={editing.id} initial={editing.initial} tags={flattenTags(tree)} onSave={save} />
+          <PresetEditor key={editing.key} ref={editorRef} presetId={editing.id} initial={editing.initial} tags={flattenTags(tree)} onSave={save} onBack={() => void back()} />
         ) : (
           preset && <Dial key={preset.id} preset={preset} />
         )}
@@ -85,7 +91,7 @@ export function Main() {
             <span className="desc-name">{preset.name}</span>{preset.description ? ` — ${preset.description}` : ''}
           </section>
         )}
-        <StartBar preset={preset} onEdit={() => preset && setEditing(editOf(preset))} onDelete={remove} />
+        <StartBar preset={preset} onEdit={() => preset && setEditing(editOf(preset))} onDelete={remove} beforeStart={back} />
         {notice && (
           <div className="notice" role="status">
             <span>{notice}</span>
