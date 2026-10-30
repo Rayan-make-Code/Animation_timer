@@ -82,8 +82,8 @@ export function StartBar({ preset, onEdit, onDelete, beforeStart }: {
           </div>
           {preset && (
             <>
-              <button className="icon-btn boxed" aria-label="Редактировать пресет" data-tip="Редактировать пресет" onClick={onEdit}><Icon name="edit" /></button>
-              <button className="icon-btn boxed danger" aria-label="Удалить пресет" data-tip="Удалить пресет" onClick={() => setConfirmDelete(true)}><Icon name="trash" /></button>
+              <button className="icon-btn boxed" aria-label="Редактировать пресет" data-tip="Изменить" onClick={onEdit}><Icon name="edit" size={28} stroke={2} /></button>
+              <button className="icon-btn boxed danger" aria-label="Удалить пресет" data-tip="Удалить" onClick={() => setConfirmDelete(true)}><Icon name="trash" size={28} stroke={2} /></button>
             </>
           )}
           <button className="icon-btn start-btn" aria-label="Старт" aria-disabled={blocked ? true : undefined} data-tip={blocked ?? 'Старт'} onClick={() => void start()}>

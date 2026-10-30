@@ -169,3 +169,20 @@ test('seconds typed as digits turn into m:ss when the field is left', async () =
   await expect(work).toHaveValue('1:30');
   await app.close();
 });
+
+test('entering a time field clears it, typing replaces the old value, leaving it empty restores it', async () => {
+  const { app, win } = await launch();
+  await win.getByRole('button', { name: /^1 ч/ }).click();
+  const work = win.getByRole('textbox', { name: 'Этап 2: работа' });
+  await expect(work).toHaveValue('1:00');
+  await work.click();
+  await expect(work).toHaveValue('');
+  await expect(work).toHaveAttribute('placeholder', '1:00');
+  await win.keyboard.type('45');
+  await win.getByRole('textbox', { name: 'Описание' }).focus();
+  await expect(work).toHaveValue('0:45');
+  await work.click();
+  await win.getByRole('textbox', { name: 'Описание' }).focus();
+  await expect(work).toHaveValue('0:45');
+  await app.close();
+});

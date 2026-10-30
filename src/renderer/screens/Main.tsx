@@ -95,7 +95,7 @@ export function Main() {
         {notice && (
           <div className="notice" role="status">
             <span>{notice}</span>
-            <button className="icon-btn" aria-label="Закрыть сообщение" data-tip="Закрыть сообщение" onClick={() => setNotice(null)}>✕</button>
+            <button className="icon-btn" aria-label="Закрыть сообщение" data-tip="Закрыть" onClick={() => setNotice(null)}>✕</button>
           </div>
         )}
       </main>

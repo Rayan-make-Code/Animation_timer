@@ -23,9 +23,18 @@ const exists = async (p: string) => {
   }
 };
 
+/** Папка для файлов с дизлайком в корне библиотеки; в категории она не попадает. */
+export const TRASH_DIR = 'trash';
+
+/** Путь (с «/») лежит в папке trash или это она сама. */
+export const isTrashPath = (rel: string): boolean => {
+  const top = rel.split('/')[0].toLowerCase();
+  return top === TRASH_DIR;
+};
+
 /**
- * Дизлайк: файл остаётся в папке, но к имени добавляется «_del», а оценка становится -1.
- * Такие изображения не попадают в сессии и не переименовываются по шаблону папки.
+ * Дизлайк: файл переносится в папку trash в корне библиотеки (создаётся при необходимости),
+ * к имени добавляется «_del», оценка становится -1. В сессии и категории такие файлы не попадают.
  */
 export async function dislikeImage(db: Db, root: string, imageId: number, rename: RenameFn = fs.promises.rename): Promise<void> {
   const row = db.prepare('select rel_path as relPath, file_name as fileName from images where id = ?').get(imageId) as { relPath: string; fileName: string } | undefined;
@@ -34,19 +43,16 @@ export async function dislikeImage(db: Db, root: string, imageId: number, rename
   const abs = path.resolve(base, ...row.relPath.split('/'));
   if (!insideRoot(base, abs)) throw new Error('Путь вне папки библиотеки');
 
-  let fileName = row.fileName;
-  if (!isDislikedName(fileName)) {
-    const [stem, ext] = splitExt(fileName);
-    const dir = path.dirname(abs);
-    fileName = `${stem}_del${ext}`;
-    for (let n = 2; await exists(path.join(dir, fileName)); n++) fileName = `${stem}_del${n}${ext}`;
-    try {
-      await rename(abs, path.join(dir, fileName));
-    } catch (e) {
-      throw new Error(`Не удалось пометить файл: ${e instanceof Error ? e.message : String(e)}`);
-    }
+  const trash = path.join(base, TRASH_DIR);
+  const [stem, ext] = splitExt(row.fileName);
+  const mark = isDislikedName(row.fileName) ? stem.replace(/_del\d*$/i, '') : stem;
+  let fileName = `${mark}_del${ext}`;
+  try {
+    await fs.promises.mkdir(trash, { recursive: true });
+    for (let n = 2; await exists(path.join(trash, fileName)); n++) fileName = `${mark}_del${n}${ext}`;
+    await rename(abs, path.join(trash, fileName));
+  } catch (e) {
+    throw new Error(`Не удалось перенести файл в ${TRASH_DIR}: ${e instanceof Error ? e.message : String(e)}`);
   }
-  const slash = row.relPath.lastIndexOf('/');
-  const relPath = slash >= 0 ? `${row.relPath.slice(0, slash + 1)}${fileName}` : fileName;
-  db.prepare('update images set file_name = ?, rel_path = ?, rating = -1 where id = ?').run(fileName, relPath, imageId);
+  db.prepare('update images set file_name = ?, rel_path = ?, rating = -1, missing = 1 where id = ?').run(fileName, `${TRASH_DIR}/${fileName}`, imageId);
 }
