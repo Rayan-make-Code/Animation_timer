@@ -53,6 +53,8 @@ let heightBeforeFullscreen = 760;
 function setFullscreen(on: boolean) {
   if (!win) return;
   if (on) {
+    // Уже в полноэкранном режиме: иначе запомнилась бы высота экрана.
+    if (win.isFullScreen()) return;
     heightBeforeFullscreen = win.getBounds().height;
     // На Windows ограничения размера мешают полноэкранному режиму — снимаем их.
     win.setMaximumSize(0, 0);

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { launch, makeLibrary, query, tempRoot } from './helpers';
 
 /** Запуск сессии через главный экран: тег «Позы», пресет «Тест», «Старт». */
-async function prepare(durationSec: number, repeats: number, opts: { restSec?: number; trash?: string } = {}) {
+async function prepare(durationSec: number, repeats: number, opts: { restSec?: number; trash?: string; dblclick?: boolean } = {}) {
   const trash = opts.trash ?? path.join(tempRoot(), 'trash');
   const run = await launch(undefined, makeLibrary(), { SKETCH_FAKE_TRASH: trash });
   const { win } = run;
@@ -20,9 +20,12 @@ async function prepare(durationSec: number, repeats: number, opts: { restSec?: n
   await win.reload();
   await win.waitForSelector('.app');
   await expect(win.getByRole('button', { name: /^Тест/ })).toHaveAttribute('aria-pressed', 'true');
-  await win.getByRole('button', { name: 'Старт', exact: true }).click();
+  const startBounds = await run.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getBounds());
+  const start = win.getByRole('button', { name: 'Старт', exact: true });
+  if (opts.dblclick) await start.dblclick();
+  else await start.click();
   await expect(win.getByRole('progressbar', { name: 'Прогресс сессии' })).toBeVisible();
-  return { ...run, trash };
+  return { ...run, trash, startBounds };
 }
 
 const time = (win: Page) => win.locator('.session-time');
@@ -108,9 +111,15 @@ test('a failed move to the recycle bin shows an error and keeps the image', asyn
 });
 
 test('Escape leaves immediately and returns to the main screen', async () => {
-  const { app, win } = await prepare(60, 1);
+  // Двойной щелчок по «Старт» не должен сбить размер окна, который восстанавливается после выхода.
+  const { app, win, startBounds } = await prepare(60, 1, { dblclick: true });
   await win.keyboard.press('Escape');
   await expect(win.getByRole('button', { name: 'Старт', exact: true })).toBeVisible();
+  await expect.poll(() => app.evaluate(({ BrowserWindow }) => {
+    const w = BrowserWindow.getAllWindows()[0];
+    const b = w.getBounds();
+    return { fullScreen: w.isFullScreen(), width: b.width, height: b.height };
+  })).toEqual({ fullScreen: false, width: 406, height: startBounds.height });
   await expect(win.getByRole('dialog')).toHaveCount(0);
   await expect(win.getByText(/Сессия завершена/)).toHaveCount(0);
   await app.close();

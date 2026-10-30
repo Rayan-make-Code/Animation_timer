@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Preset } from '../../shared/api';
 import { formatClock, totalSec } from '../../core/dial';
 import { expandPreset, totalWork } from '../../core/timer';
@@ -10,6 +10,8 @@ export function StartBar({ preset, onEdit, onDelete }: { preset: Preset | null; 
   const { library, tree, selected, session, setSession, setNotice, firstRun, finishFirstRun, finishedSummary, setFinishedSummary } = useStore();
   const [cycle, setCycle] = useState<{ remaining: number; total: number } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Запуск уже идёт: повторный щелчок (двойной клик) игнорируется.
+  const starting = useRef(false);
 
   // Пересчёт после смены категорий, обновления библиотеки и окончания сессии.
   useEffect(() => {
@@ -28,7 +30,8 @@ export function StartBar({ preset, onEdit, onDelete }: { preset: Preset | null; 
         : !preset ? 'Сначала создайте пресет' : null;
 
   const start = async () => {
-    if (blocked || !preset) return;
+    if (blocked || !preset || starting.current) return;
+    starting.current = true;
     try {
       const queue = await window.sketch.buildQueue(selected, count);
       if (firstRun) finishFirstRun();
@@ -37,6 +40,8 @@ export function StartBar({ preset, onEdit, onDelete }: { preset: Preset | null; 
       setSession({ preset, queue });
     } catch (e) {
       setNotice(errorText(e));
+    } finally {
+      starting.current = false;
     }
   };
 
