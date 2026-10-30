@@ -212,3 +212,17 @@ test('the default window fits the editor with three intervals without scrolling 
   await expect.poll(() => main.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(0);
   await app.close();
 });
+
+test('Обновить moves files marked _del into trash', async () => {
+  const lib = makeLibrary();
+  const { app, win, dataDir } = await launch(undefined, lib);
+  await win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
+  await expect(win.getByRole('button', { name: 'Обновить', exact: true })).toBeEnabled();
+  fs.writeFileSync(path.join(lib, 'Позы', 'old_del.png'), png(10, 10, 10));
+  await win.getByRole('button', { name: 'Обновить', exact: true }).click();
+  await expect(win.getByText(/в trash 1/)).toBeVisible();
+  expect(fs.readdirSync(path.join(lib, 'trash'))).toEqual(['old_del.png']);
+  expect(fs.existsSync(path.join(lib, 'Позы', 'old_del.png'))).toBe(false);
+  expect(query<{ c: number }>(dataDir, "select count(*) as c from images where file_name like '%\\_del%' escape '\\' and missing = 0")[0].c).toBe(0);
+  await app.close();
+});

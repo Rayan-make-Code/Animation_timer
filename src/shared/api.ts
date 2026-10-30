@@ -1,4 +1,5 @@
 import type { ImportReport } from '../core/backup';
+import type { TrashReport } from '../core/dislike';
 import type { CategoryNode, SyncResult } from '../core/library';
 import type { QueueItem } from '../core/picker';
 import type { NewPreset, Preset } from '../core/presets';
@@ -6,7 +7,10 @@ import type { ImageRow, Rating } from '../core/ratings';
 import type { RenameReport } from '../core/rename';
 import type { Settings } from '../core/settings';
 
-export type { CategoryNode, ImageRow, ImportReport, NewPreset, Preset, QueueItem, Rating, RenameReport, Settings, SyncResult };
+export type { CategoryNode, ImageRow, ImportReport, NewPreset, Preset, QueueItem, Rating, RenameReport, Settings, SyncResult, TrashReport };
+
+/** Итог сверки библиотеки; trash — файлы с «_del», перенесённые в trash (только «Обновить»). */
+export interface LibraryReport { sync: SyncResult; rename: RenameReport; trash: TrashReport }
 
 export interface AppState { library: string | null; dataDir: string; version: string }
 
@@ -14,9 +18,9 @@ export interface AppState { library: string | null; dataDir: string; version: st
 export interface SketchApi {
   getState(): Promise<AppState>;
   /** Диалог выбора папки + первичная синхронизация и переименование. null — пользователь отменил. */
-  connectLibrary(): Promise<{ sync: SyncResult; rename: RenameReport } | null>;
-  /** Сверка с диском; новые файлы переименовываются автоматически. */
-  syncLibrary(): Promise<{ sync: SyncResult; rename: RenameReport }>;
+  connectLibrary(): Promise<LibraryReport | null>;
+  /** Сверка с диском: файлы с «_del» уходят в trash, новые файлы переименовываются автоматически. */
+  syncLibrary(): Promise<LibraryReport>;
   renameNew(): Promise<RenameReport>;
   getTree(): Promise<CategoryNode[]>;
   toggleRating(imageId: number, target: 1 | -1): Promise<Rating>;

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, test } from 'vitest';
 import { openDb, type Db } from '../../src/core/db';
-import { dislikeImage, isDislikedName } from '../../src/core/dislike';
+import { dislikeImage, isDislikedName, trashMarked } from '../../src/core/dislike';
 import { listTree, syncLibrary } from '../../src/core/library';
 import { buildQueue, cycleStatus } from '../../src/core/picker';
 import { renameNewImages } from '../../src/core/rename';
@@ -85,5 +85,36 @@ describe('dislikeImage', () => {
     expect(isDislikedName('A_img_01_del3.png')).toBe(true);
     expect(isDislikedName('model_delta.png')).toBe(false);
     expect(isDislikedName('A_img_01.png')).toBe(false);
+  });
+});
+
+describe('trashMarked', () => {
+  test('moves _del files from categories to trash and drops them from sessions', async () => {
+    makeFiles(root, { 'A/old_del.jpg': 'q', 'A/B/x_del2.png': 'w', 'A/model_delta.png': 'e' });
+    await syncLibrary(db, root);
+    const id = idOf('A/old_del.jpg');
+    const res = await trashMarked(db, root);
+    expect(res).toEqual({ moved: 2, failed: [] });
+    expect(fs.readdirSync(path.join(root, 'trash')).sort()).toEqual(['old_del.jpg', 'x_del.png']);
+    expect(fs.existsSync(path.join(root, 'A', 'old_del.jpg'))).toBe(false);
+    expect(fs.existsSync(path.join(root, 'A', 'model_delta.png'))).toBe(true);
+    expect(rowOf(id)).toEqual({ relPath: 'trash/old_del.jpg', fileName: 'old_del.jpg', rating: -1 });
+    await syncLibrary(db, root);
+    expect(buildQueue(db, catIds(), 10).some((q) => isDislikedName(q.image.fileName))).toBe(false);
+  });
+
+  test('picks a free name in trash and leaves trash files alone', async () => {
+    makeFiles(root, { 'trash/1_del.png': 'z', 'A/1_del.png': 'q' });
+    const res = await trashMarked(db, root);
+    expect(res.moved).toBe(1);
+    expect(fs.readdirSync(path.join(root, 'trash')).sort()).toEqual(['1_del.png', '1_del2.png']);
+  });
+
+  test('reports a failed move and keeps the file', async () => {
+    makeFiles(root, { 'A/1_del.png': 'q' });
+    const res = await trashMarked(db, root, async () => { throw new Error('boom'); });
+    expect(res.moved).toBe(0);
+    expect(res.failed).toEqual([{ path: 'A/1_del.png', error: 'Не удалось перенести файл в trash: boom' }]);
+    expect(fs.existsSync(path.join(root, 'A', '1_del.png'))).toBe(true);
   });
 });

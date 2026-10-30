@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import type { RenameReport, SyncResult } from '../../shared/api';
+import type { LibraryReport } from '../../shared/api';
 import { Icon } from '../components';
 import { errorText, useStore } from '../store';
 
 /** Короткая сводка по библиотеке: только то, что изменилось. */
-const summary = (r: { sync: SyncResult; rename: RenameReport }) => {
+const summary = (r: LibraryReport) => {
   const parts = [`новых ${r.sync.addedImages}`];
+  if (r.trash.moved) parts.push(`в trash ${r.trash.moved}`);
   if (r.sync.missing) parts.push(`пропало ${r.sync.missing}`);
   if (r.rename.renamed) parts.push(`переименовано ${r.rename.renamed}`);
-  if (r.rename.failed.length) parts.push(`ошибок ${r.rename.failed.length}`);
+  const failed = r.rename.failed.length + r.trash.failed.length;
+  if (failed) parts.push(`ошибок ${failed}`);
   return `Библиотека: ${parts.join(', ')}`;
 };
 
