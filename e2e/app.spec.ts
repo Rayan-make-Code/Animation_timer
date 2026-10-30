@@ -201,3 +201,14 @@ test('entering a time field clears it, typing replaces the old value, leaving it
   await expect(work).toHaveValue('0:45');
   await app.close();
 });
+
+test('the default window fits the editor with three intervals without scrolling the screen', async () => {
+  const { app, win } = await launch(undefined, makeLibrary());
+  await win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
+  await expect(win.getByRole('status')).toContainText('Библиотека:');
+  await win.getByRole('button', { name: /^1 ч/ }).click();
+  for (let i = 0; i < 4; i++) await win.getByRole('button', { name: 'Добавить этап' }).click();
+  const main = win.locator('.main');
+  await expect.poll(() => main.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(0);
+  await app.close();
+});

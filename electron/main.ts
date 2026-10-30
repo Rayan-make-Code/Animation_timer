@@ -46,8 +46,8 @@ async function syncAndRename(root: string) {
 
 const WIN_WIDTH = 406;
 const WIN_MIN_HEIGHT = 560;
-// Высота по содержимому главного экрана: циферблат, кнопки и сообщение без пустого низа.
-const WIN_HEIGHT = 580;
+// Высота по умолчанию: редактор с тремя видимыми этапами (с категориями) помещается без прокрутки экрана.
+const WIN_HEIGHT = 680;
 const WIN_MAX_HEIGHT = 10000;
 // Высота окна до входа в полноэкранный режим.
 let heightBeforeFullscreen = WIN_HEIGHT;
