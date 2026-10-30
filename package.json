@@ -1,7 +1,7 @@
 {
   "name": "miyp-timer",
   "productName": "MIYP Timer",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "MIYP Timer — таймер набросков для аниматора",
   "private": true,
   "main": "dist/electron/main.js",

@@ -149,14 +149,29 @@ test('a preset whose categories have no images left cannot start, with a message
   await app.close();
 });
 
-test('one click on Старт saves the open editor and starts the session', async () => {
+test('the editor hides the start buttons; the back arrow brings them back', async () => {
   const { app, win } = await launch(undefined, makeLibrary());
   await win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
+  await expect(win.getByRole('button', { name: 'Старт', exact: true })).toBeVisible();
   await win.getByRole('button', { name: /^1 ч/ }).click();
-  await win.getByRole('group', { name: 'Категории пресета' }).getByRole('button', { name: 'Позы', exact: true }).click();
-  // Категория ещё не сохранена, поэтому кнопка выглядит недоступной, но нажать её можно: старт сначала сохраняет редактор.
-  await win.getByRole('button', { name: 'Старт', exact: true }).click({ force: true });
-  await expect(win.getByRole('progressbar', { name: 'Прогресс сессии' })).toBeVisible();
+  await expect(win.getByRole('button', { name: 'Старт', exact: true })).toHaveCount(0);
+  await expect(win.getByRole('button', { name: 'Редактировать пресет' })).toHaveCount(0);
+  await win.getByRole('button', { name: 'Назад к циферблату' }).click();
+  await expect(win.getByRole('button', { name: 'Старт', exact: true })).toBeVisible();
+  await app.close();
+});
+
+test('the interval list shows at most three intervals and scrolls the rest', async () => {
+  const { app, win } = await launch();
+  await win.getByRole('button', { name: /^1 ч/ }).click();
+  for (let i = 0; i < 4; i++) await win.getByRole('button', { name: 'Добавить этап' }).click();
+  const size = await win.locator('.ed-groups').evaluate((el) => {
+    const rows = [...el.querySelectorAll<HTMLElement>('.ed-row')];
+    return { rows: rows.length, client: el.clientHeight, three: rows.slice(0, 3).reduce((h, r) => h + r.offsetHeight, 0), scroll: el.scrollHeight };
+  });
+  expect(size.rows).toBe(6);
+  expect(size.client).toBe(size.three);
+  expect(size.scroll).toBeGreaterThan(size.client);
   await app.close();
 });
 
