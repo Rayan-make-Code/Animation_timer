@@ -161,7 +161,7 @@ button.icon-btn.danger:hover:not(:disabled) { color: var(--fix); }
 .errors { margin: 0; padding-left: 18px; color: var(--danger); font-size: 12px; }
 
 /* Описание и категории */
-.desc { color: var(--text-2); font-size: 13px; flex: none; }
+.desc { color: var(--text-2); font-size: 13px; flex: none; text-align: center; }
 .desc-name { color: var(--text); }
 .tags { display: flex; flex-wrap: wrap; gap: 4px; flex: none; }
 .chip { height: 24px; padding: 0 9px; border-radius: 3.5px; font-size: 12.5px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--text-2); }
