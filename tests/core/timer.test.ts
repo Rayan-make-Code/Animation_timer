@@ -39,13 +39,13 @@ describe('expandPreset', () => {
     expect(steps[0]).toMatchObject({ kind: 'prepare', label: 'Приготовьтесь', sec: 5 });
     expect(steps.filter((s) => s.kind === 'work')).toHaveLength(38);
     expect(totalWork(steps)).toBe(38);
-    expect(steps.filter((s) => s.kind === 'rest')).toHaveLength(38);
+    expect(steps.filter((s) => s.kind === 'rest')).toHaveLength(37); // после последнего повтора перерыва нет
     expect(steps.filter((s) => s.kind === 'work').map((s) => s.workIndex)).toEqual(Array.from({ length: 38 }, (_, i) => i));
   });
 
   test('a rest keeps the image of the work step before it', () => {
     const steps: Step[] = expandPreset({ name: 'p', description: '', groups: simple });
-    expect(steps.map((s) => `${s.kind}${s.workIndex}`)).toEqual(['work0', 'rest0', 'work1', 'rest1', 'work2', 'rest2']);
+    expect(steps.map((s) => `${s.kind}${s.workIndex}`)).toEqual(['work0', 'rest0', 'work1', 'rest1', 'work2']);
   });
 
   test('a single one-shot group is a real work step, not a preparation', () => {

@@ -1,22 +1,34 @@
 import { describe, expect, test } from 'vitest';
 import { openDb } from '../../src/core/db';
 import { seedDefaultPresets } from '../../src/core/defaults';
+import { expandPreset } from '../../src/core/timer';
+import { formatTotal, totalSec } from '../../src/core/dial';
 import { listPresets, savePreset } from '../../src/core/presets';
 
 describe('default presets', () => {
-  test('seeds three presets once', () => {
+  test('seeds all presets once', () => {
     const db = openDb(':memory:');
     expect(seedDefaultPresets(db)).toBe(true);
-    expect(listPresets(db).map((p) => p.name)).toEqual(['Разминка', 'Жесты 20', 'Длинная']);
+    expect(listPresets(db).map((p) => p.name)).toEqual(['Разминка', 'Жесты 20', 'Длинная', '15 мин', '30 мин', '1 час']);
     expect(seedDefaultPresets(db)).toBe(false);
-    expect(listPresets(db)).toHaveLength(3);
+    expect(listPresets(db)).toHaveLength(6);
   });
 
-  test('does not seed when a user preset exists', () => {
+  test('an existing library gets the new presets once, keeping its own', () => {
     const db = openDb(':memory:');
     savePreset(db, { name: 'Мой', description: '', groups: [{ repeats: 1, workLabel: 'a', workSec: 10, restSec: 0 }] });
+    expect(seedDefaultPresets(db)).toBe(true);
+    expect(listPresets(db).map((p) => p.name)).toEqual(['Мой', '15 мин', '30 мин', '1 час']);
     expect(seedDefaultPresets(db)).toBe(false);
-    expect(listPresets(db)).toHaveLength(1);
+  });
+
+  test('the new presets add up to their names', () => {
+    const db = openDb(':memory:');
+    seedDefaultPresets(db);
+    const byName = Object.fromEntries(listPresets(db).map((p) => [p.name, p]));
+    expect(formatTotal(totalSec(expandPreset(byName['15 мин'])))).toBe('15 мин');
+    expect(formatTotal(totalSec(expandPreset(byName['30 мин'])))).toBe('30 мин');
+    expect(formatTotal(totalSec(expandPreset(byName['1 час'])))).toBe('1 ч');
   });
 
   test('preset contents', () => {

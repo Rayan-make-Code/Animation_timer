@@ -14,7 +14,7 @@ export function Dial({ preset }: { preset: Preset }) {
   const ticks = dialTicks(steps);
   const [first, second] = steps;
   return (
-    <section className="dial-wrap slide" aria-label="Циферблат пресета">
+    <section className="dial-wrap flip" aria-label="Циферблат пресета">
       <div className="dial">
         {ticks.map((t, i) => (
           <span key={i} className={`dial-tick${t.long ? ' long' : ''}`} style={{ background: PHASE_COLOR[t.phase], transform: `rotate(${t.deg}deg)` }} />

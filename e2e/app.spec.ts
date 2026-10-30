@@ -33,9 +33,25 @@ test('after the first session start the panel is hidden and a preset click shows
   const { app, win } = await launch(first.dataDir);
   await expect(win.getByRole('button', { name: /^Жесты 20/ })).toBeVisible();
   await expect(win.getByRole('toolbar', { name: 'Библиотека' })).toHaveCount(0);
+  // Выбор пресета сразу открывает редактор; переход к категориям сохраняет и показывает циферблат.
   await win.getByRole('button', { name: /^Жесты 20/ }).click();
+  await expect(win.getByRole('textbox', { name: 'Название' })).toHaveValue('Жесты 20');
+  await win.getByRole('group', { name: 'Категории' }).getByRole('button', { name: 'Позы', exact: true }).click();
   await expect(win.getByRole('region', { name: 'Циферблат пресета' })).toBeVisible();
   await expect(win.getByRole('textbox', { name: 'Название' })).toHaveCount(0);
+  await app.close();
+});
+
+test('editing autosaves when the user moves on to the categories, and preparation has no repeats', async () => {
+  const { app, win, dataDir } = await launch(undefined, makeLibrary());
+  await win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
+  await win.getByRole('button', { name: /^Жесты 20/ }).click();
+  await expect(win.getByRole('textbox', { name: 'Этап 1: повторы' })).toHaveCount(0);
+  await expect(win.getByRole('textbox', { name: 'Этап 1: упражнение' })).toHaveValue('Приготовьтесь');
+  await win.getByRole('textbox', { name: 'Название' }).fill('Жесты 25');
+  await win.getByRole('group', { name: 'Категории' }).getByRole('button', { name: 'Позы', exact: true }).click();
+  await expect(win.getByRole('textbox', { name: 'Название' })).toHaveCount(0);
+  expect(query<{ name: string }>(dataDir, "select name from presets where name = 'Жесты 25'")).toHaveLength(1);
   await app.close();
 });
 
@@ -52,7 +68,6 @@ test('connecting a library shows category tags, all off', async () => {
   await tags.getByRole('button', { name: 'Позы', exact: true }).click();
   await expect(tags.getByRole('button', { name: 'Позы', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(start).toBeEnabled();
-  await expect(win.getByText('цикл: осталось 3 из 3')).toBeVisible();
   await app.close();
 });
 
@@ -100,7 +115,6 @@ test('a selected category whose images are all gone is dropped from the selectio
   const first = await launch(undefined, lib);
   await first.win.getByRole('button', { name: 'Выбрать папку библиотеки' }).click();
   await first.win.getByRole('group', { name: 'Категории' }).getByRole('button', { name: 'Позы', exact: true }).click();
-  await expect(first.win.getByText('цикл: осталось 3 из 3')).toBeVisible();
   await first.app.close();
 
   // Все изображения «Позы» пропали с диска.

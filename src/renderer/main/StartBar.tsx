@@ -5,9 +5,10 @@ import { expandPreset, totalWork } from '../../core/timer';
 import { Icon, PlayIcon } from '../components';
 import { errorText, useStore } from '../store';
 
-/** Блок «Старт»: полоса цикла, сумма, правка и удаление пресета, запуск сессии. */
+/** Блок «Старт»: сумма, правка и удаление пресета, запуск сессии. */
 export function StartBar({ preset, onEdit, onDelete }: { preset: Preset | null; onEdit: () => void; onDelete: () => Promise<void> }) {
   const { library, tree, selected, session, setSession, setNotice, firstRun, finishFirstRun, finishedSummary, setFinishedSummary } = useStore();
+  // Остаток цикла нужен только для проверки: в выбранных категориях должны быть изображения.
   const [cycle, setCycle] = useState<{ remaining: number; total: number } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Запуск уже идёт: повторный щелчок (двойной клик) игнорируется.
@@ -45,15 +46,8 @@ export function StartBar({ preset, onEdit, onDelete }: { preset: Preset | null; 
     }
   };
 
-  const viewed = cycle ? cycle.total - cycle.remaining : 0;
-  const cycleText = cycle ? `цикл: осталось ${cycle.remaining} из ${cycle.total}` : 'цикл: категории не выбраны';
-
   return (
     <section className="start" aria-label="Старт">
-      <div className="cycle-bar" role="progressbar" aria-label="Цикл выбранных категорий" aria-valuemin={0} aria-valuemax={cycle?.total ?? 0} aria-valuenow={viewed}
-        data-tip={cycle ? `Цикл: осталось ${cycle.remaining} из ${cycle.total}` : 'Цикл: выберите категории'}>
-        <div className="cycle-fill" style={{ height: cycle && cycle.total ? `${(viewed / cycle.total) * 100}%` : 0 }} />
-      </div>
       {confirmDelete && preset ? (
         <>
           <div className="start-text"><span className="start-main">Удалить пресет?</span><span className="start-sub">{preset.name}</span></div>
@@ -64,7 +58,6 @@ export function StartBar({ preset, onEdit, onDelete }: { preset: Preset | null; 
         <>
           <div className="start-text">
             <span className="start-main">{preset ? `${formatClock(totalSec(steps))} · ${count} рис.` : 'Нет пресета'}</span>
-            <span className="start-sub">{cycleText}</span>
             {finishedSummary && <span className="start-sub done">{finishedSummary}</span>}
           </div>
           {preset && (

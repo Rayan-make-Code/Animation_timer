@@ -6,7 +6,7 @@ export interface Tick {
   /** Угол метки в градусах от верха по часовой стрелке (середина слота). */
   deg: number;
   phase: Phase;
-  /** Длинная метка: внутри слота начинается отдых. */
+  /** Длинная метка: внутри слота начинается отдых (цвет — отдыха). */
   long: boolean;
 }
 
@@ -31,10 +31,12 @@ export function dialTicks(steps: Step[], n = 60): Tick[] {
     while (si < steps.length - 1 && starts[si] + steps[si].sec <= mid) si++;
     t.phase = steps[si].kind;
   });
+  // Перерыв отмечается длинной зелёной засечкой, даже если в её слоте больше работы.
   steps.forEach((s, k) => {
     if (s.kind !== 'rest') return;
     const i = Math.min(n - 1, Math.floor((starts[k] * n) / total));
     ticks[i].long = true;
+    ticks[i].phase = 'rest';
   });
   return ticks;
 }
