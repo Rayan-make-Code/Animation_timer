@@ -19,3 +19,16 @@ export function parseIds(raw: string | null): number[] {
     return [];
   }
 }
+
+export interface Settings { selectedPreset: number | null; selectedCategories: number[]; firstRunDone: boolean }
+
+/** Сохранённые настройки главного экрана. Первый запуск пройден, если стоит флаг или (обновление с 0.1) уже подключена библиотека. */
+export function readSettings(db: Db): Settings {
+  const raw = getSetting(db, 'selectedPreset');
+  const preset = raw ? Number(raw) : NaN;
+  return {
+    selectedPreset: Number.isInteger(preset) ? preset : null,
+    selectedCategories: parseIds(getSetting(db, 'selectedCategories')),
+    firstRunDone: getSetting(db, 'firstRunDone') === '1' || !!getSetting(db, 'library'),
+  };
+}

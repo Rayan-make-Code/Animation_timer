@@ -10,7 +10,7 @@ import { copyPreset, deletePreset, listPresets, savePreset } from '../src/core/p
 import { IMAGE_COLUMNS, recordView, setRating, toggleRating, toImageRow, undoView } from '../src/core/ratings';
 import { renameNewImages } from '../src/core/rename';
 import { seedDefaultPresets } from '../src/core/defaults';
-import { getSetting, parseIds, setSetting } from '../src/core/settings';
+import { getSetting, readSettings, setSetting } from '../src/core/settings';
 import { insideRoot } from '../src/core/paths';
 import { trashImage } from '../src/core/trash';
 import { assertWritable, resolveDataDir } from './paths';
@@ -120,15 +120,7 @@ function registerIpc() {
   handle('session:unview', (viewId: number) => undoView(db, viewId));
   handle('session:cycle', (ids: number[]) => cycleStatus(db, ids));
   handle('session:trash', (id: number) => trashImage(db, requireRoot(), id, trashFile));
-  handle('settings:get', () => {
-    const raw = getSetting(db, 'selectedPreset');
-    const preset = raw ? Number(raw) : NaN;
-    return {
-      selectedPreset: Number.isInteger(preset) ? preset : null,
-      selectedCategories: parseIds(getSetting(db, 'selectedCategories')),
-      firstRunDone: getSetting(db, 'firstRunDone') === '1',
-    };
-  });
+  handle('settings:get', () => readSettings(db));
   handle('settings:save', (p: { selectedPreset?: number | null; selectedCategories?: number[]; firstRunDone?: boolean }) => {
     if (p.selectedPreset !== undefined) setSetting(db, 'selectedPreset', p.selectedPreset === null ? '' : String(p.selectedPreset));
     if (p.selectedCategories !== undefined) setSetting(db, 'selectedCategories', JSON.stringify(p.selectedCategories));

@@ -75,15 +75,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void (async () => {
-      const [settings, list, state, nodes] = await Promise.all([
-        window.sketch.getSettings(), window.sketch.listPresets(), window.sketch.getState(), window.sketch.getTree(),
-      ]);
-      setFirstRun(!settings.firstRunDone);
-      setLibrary(state.library);
-      setTree(nodes);
-      setSelected(cleanSelection(settings.selectedCategories, nodes));
-      setPresets(list);
-      setSelectedPresetId(list.some((p) => p.id === settings.selectedPreset) ? settings.selectedPreset : list[0]?.id ?? null);
+      try {
+        const [settings, list, state, nodes] = await Promise.all([
+          window.sketch.getSettings(), window.sketch.listPresets(), window.sketch.getState(), window.sketch.getTree(),
+        ]);
+        setFirstRun(!settings.firstRunDone);
+        setLibrary(state.library);
+        setTree(nodes);
+        setSelected(cleanSelection(settings.selectedCategories, nodes));
+        setPresets(list);
+        setSelectedPresetId(list.some((p) => p.id === settings.selectedPreset) ? settings.selectedPreset : list[0]?.id ?? null);
+      } catch (e) {
+        // Без этого главный экран так и остался бы пустым без объяснений.
+        setNotice(`Не удалось загрузить данные: ${errorText(e)}`);
+      }
     })();
   }, []);
 

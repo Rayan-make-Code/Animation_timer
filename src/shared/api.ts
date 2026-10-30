@@ -4,10 +4,9 @@ import type { QueueItem } from '../core/picker';
 import type { NewPreset, Preset } from '../core/presets';
 import type { ImageRow, Rating } from '../core/ratings';
 import type { RenameReport } from '../core/rename';
+import type { Settings } from '../core/settings';
 
-export type { CategoryNode, ImageRow, ImportReport, NewPreset, Preset, QueueItem, Rating, RenameReport, SyncResult };
-
-export interface Settings { selectedPreset: number | null; selectedCategories: number[]; firstRunDone: boolean }
+export type { CategoryNode, ImageRow, ImportReport, NewPreset, Preset, QueueItem, Rating, RenameReport, Settings, SyncResult };
 
 export interface AppState { library: string | null; dataDir: string; version: string }
 
