@@ -51,8 +51,10 @@ button { cursor: pointer; }
 @keyframes slideIn { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
 .slide { animation: slideIn .32s var(--hover-ease) both; }
 .rise { animation: slideIn .36s var(--hover-ease) both; }
+@keyframes flipIn { from { opacity: 0; transform: perspective(900px) rotateY(90deg); } to { opacity: 1; transform: perspective(900px) rotateY(0); } }
+.flip { animation: flipIn .5s var(--hover-ease) both; }
 @media (prefers-reduced-motion: reduce) {
-  .slide, .rise { animation: none; }
+  .slide, .rise, .flip { animation: none; }
 }
 
 /* Кнопки */
@@ -123,6 +125,7 @@ button.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background
 .ed-row { display: flex; align-items: stretch; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--line); border-left: 2px solid transparent; }
 .ed-row.selected { background: var(--face); border-left-color: var(--accent); }
 .editor .ed-rep { flex-direction: row; align-items: center; gap: 2px; color: var(--text-3); }
+.editor .ed-rep-fixed { width: 38px; flex: none; text-align: center; color: var(--text-3); font-size: 13px; }
 .editor .ed-rep input { width: 38px; padding: 0 4px; text-align: center; border-radius: 8px; background: var(--panel-2); }
 .ed-boxes { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .ed-box { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 4px 0 10px; border: 1px solid; border-radius: 8px; }
@@ -149,8 +152,6 @@ button.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) { background
 
 /* Старт */
 .start { flex: none; display: flex; align-items: stretch; gap: 10px; padding: 8px 10px 8px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
-.cycle-bar { width: 6px; flex: none; border-radius: 3px; background: #2b2c34; display: flex; flex-direction: column; justify-content: flex-end; }
-.cycle-fill { border-radius: 3px; background: var(--work); }
 .start-text { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 1px; }
 .start-main { font-size: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .start-sub { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { NewPreset, Preset } from '../../shared/api';
 import { CategoryTags } from '../main/CategoryTags';
 import { Dial } from '../main/Dial';
 import { Footer } from '../main/Footer';
-import { blankPreset, PresetEditor } from '../main/PresetEditor';
+import { blankPreset, PresetEditor, type EditorHandle } from '../main/PresetEditor';
 import { PresetRow } from '../main/PresetRow';
 import { StartBar } from '../main/StartBar';
 import { errorText, useStore } from '../store';
@@ -23,12 +23,19 @@ export function Main() {
   const list = presets ?? [];
   const preset = list.find((p) => p.id === selectedPresetId) ?? null;
 
-  const pick = (p: Preset) => {
+  // Открытый редактор сохраняется сам, когда пользователь переходит к другому блоку или пресету.
+  const editorRef = useRef<EditorHandle>(null);
+  const commit = async (): Promise<boolean> => (editing ? (await editorRef.current?.commit()) ?? true : true);
+  const pick = async (p: Preset) => {
+    if (!(await commit())) return;
     selectPreset(p.id);
-    // В первый запуск клик сразу открывает редактор, потом — циферблат.
-    setEditing(firstRun ? editOf(p) : null);
+    setEditing(editOf(p));
   };
-  const save = async (draft: NewPreset) => {
+  const newPreset = async () => {
+    if (!(await commit())) return;
+    setEditing({ initial: blankPreset(), key: ++editKey });
+  };
+  const save = async (draft: NewPreset): Promise<boolean> => {
     try {
       const id = await window.sketch.savePreset({ ...draft, id: editing?.id });
       await reloadPresets();
@@ -36,7 +43,9 @@ export function Main() {
       setEditing(null);
     } catch (e) {
       setNotice(errorText(e));
+      return false;
     }
+    return true;
   };
   const remove = async () => {
     if (!preset) return;
@@ -52,10 +61,13 @@ export function Main() {
 
   return (
     <>
-      <main className="main">
-        <PresetRow presets={list} selectedId={selectedPresetId} onPick={pick} onNew={() => setEditing({ initial: blankPreset(), key: ++editKey })} />
+      <main className="main" onPointerDownCapture={(e) => {
+        // Нажатие вне редактора и ряда пресетов (категории, «Старт», подвал) сохраняет черновик.
+        if (editing && !(e.target as Element).closest('.editor, .preset-row')) void commit();
+      }}>
+        <PresetRow presets={list} selectedId={selectedPresetId} onPick={(p) => void pick(p)} onNew={() => void newPreset()} />
         {editing ? (
-          <PresetEditor key={editing.key} initial={editing.initial} onCancel={() => setEditing(null)} onSave={save} />
+          <PresetEditor key={editing.key} ref={editorRef} initial={editing.initial} onCancel={() => setEditing(null)} onSave={save} />
         ) : (
           preset && <Dial key={preset.id} preset={preset} />
         )}

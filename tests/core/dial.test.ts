@@ -10,15 +10,15 @@ test('returns n ticks spaced 360/n degrees starting at half a step', () => {
   expect(t).toHaveLength(60);
   expect(t[0].deg).toBeCloseTo(3); expect(t[59].deg).toBeCloseTo(357);
 });
-test('colours a tick by the phase at its midpoint', () => {
-  const t = dialTicks(steps, 60);           // total 155 s → slot ≈ 2.58 s
+test('colours a tick by the phase at its midpoint; the last repeat has no rest', () => {
+  const t = dialTicks(steps, 60);           // prepare 5 s, work 60, rest 15, work 60 → total 140 s, slot ≈ 2.33 s
   expect(t[0].phase).toBe('prepare'); expect(t[3].phase).toBe('work');
-  expect(t[59].phase).toBe('rest');
+  expect(t[59].phase).toBe('work');
 });
-test('marks a tick long when a rest starts inside its slot', () => {
-  const t = dialTicks(steps, 60);
-  expect(t.filter((x) => x.long)).toHaveLength(2);
-  expect(t.filter((x) => x.long).every((x) => x.phase === 'rest' || x.phase === 'work')).toBe(true);
+test('marks a tick long and rest-coloured where a rest starts, even inside work time', () => {
+  const t = dialTicks(steps, 60);           // rest starts at 65 s → slot floor(65·60/140) = 27
+  expect(t.filter((x) => x.long)).toHaveLength(1);
+  expect(t[27]).toMatchObject({ long: true, phase: 'rest' });
 });
 test('keeps 60 ticks for a 3 h preset with 1 s rests', () => {
   const long = expandPreset({ name: 'l', description: '', groups: [{ repeats: 540, workLabel: 'w', workSec: 19, restSec: 1 }] });
