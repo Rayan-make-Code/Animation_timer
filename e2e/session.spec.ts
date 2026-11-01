@@ -4,7 +4,7 @@ import path from 'node:path';
 import { launch, makeLibrary, query } from './helpers';
 
 /** Запуск сессии через главный экран: пресет «Тест» с категорией «Позы», «Старт». */
-async function prepare(durationSec: number, repeats: number, opts: { restSec?: number; dblclick?: boolean } = {}) {
+async function prepare(durationSec: number, repeats: number, opts: { restSec?: number; dblclick?: boolean; fromEditor?: (win: Page) => Promise<void> } = {}) {
   const lib = makeLibrary();
   const run = await launch(undefined, lib);
   const { win } = run;
@@ -23,6 +23,14 @@ async function prepare(durationSec: number, repeats: number, opts: { restSec?: n
   await win.waitForSelector('.app');
   await expect(win.getByRole('button', { name: /^Тест/ })).toHaveAttribute('aria-pressed', 'true');
   const startBounds = await run.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getBounds());
+  if (opts.fromEditor) {
+    // Play в подвале редактора: пресет открыт на правку, кнопок под циферблатом нет.
+    await win.getByRole('button', { name: /^Тест/ }).click();
+    await opts.fromEditor(win);
+    await win.getByRole('button', { name: 'Запустить пресет' }).click();
+    await expect(win.getByRole('progressbar', { name: 'Прогресс сессии' })).toBeVisible();
+    return { ...run, lib, startBounds };
+  }
   const start = win.getByRole('button', { name: 'Старт', exact: true });
   await expect(start).toBeEnabled();
   if (opts.dblclick) await start.dblclick();
@@ -176,5 +184,19 @@ test('progress strip shows remaining time and count', async () => {
   await expect(win.locator('.session-count')).toHaveText('1/2', { timeout: 6_000 });
   await expect(time(win)).toHaveText(/^\d+:\d{2}$/);
   await expect(win.getByRole('progressbar', { name: 'Прогресс сессии' })).toHaveAttribute('aria-valuenow', '1');
+  await app.close();
+});
+
+test('Play in the preset editor saves the draft and starts the session', async () => {
+  const { app, win } = await prepare(60, 1, {
+    fromEditor: async (w) => {
+      await expect(w.getByRole('button', { name: 'Старт', exact: true })).toHaveCount(0);
+      // Правка без выхода из поля: Play сам сохраняет черновик.
+      await w.getByRole('textbox', { name: 'Название' }).fill('Тест 2');
+    },
+  });
+  await win.keyboard.press('Escape');
+  await expect(win.getByRole('button', { name: 'Старт', exact: true })).toBeVisible();
+  await expect(win.getByRole('button', { name: /^Тест 2/ })).toHaveAttribute('aria-pressed', 'true');
   await app.close();
 });

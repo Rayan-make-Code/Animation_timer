@@ -5,18 +5,16 @@ import { expandPreset } from '../../core/timer';
 import { Icon, PlayIcon } from '../components';
 import { errorText, useStore } from '../store';
 
-/** Кнопки под циферблатом: правка пресета слева, запуск в центре, удаление справа. */
-export function StartBar({ preset, onEdit, onDelete, beforeStart }: {
-  preset: Preset | null;
-  onEdit: () => void;
-  onDelete: () => Promise<void>;
-  /** Сохраняет открытый редактор; false — сохранить не удалось, старт отменяется. */
-  beforeStart: () => Promise<boolean>;
-}) {
-  const { library, tree, session, setSession, setNotice, firstRun, finishFirstRun, finishedSummary, setFinishedSummary } = useStore();
+/**
+ * Запуск сессии по пресету: причина блокировки (или null) и сам запуск.
+ * Общий для кнопки «Старт» под циферблатом и кнопки Play в подвале редактора.
+ * beforeStart сохраняет открытый редактор и возвращает id пресета для запуска; null — сохранить не удалось, старт отменяется.
+ * (Новый пресет получает id только при первом сохранении, поэтому id берётся после beforeStart.)
+ */
+export function useStart(preset: Preset | null, beforeStart: () => Promise<number | null>) {
+  const { library, tree, session, setSession, setNotice, firstRun, finishFirstRun, setFinishedSummary } = useStore();
   // В наборе категорий каждого рабочего шага должны быть изображения; пустой набор блокирует старт.
   const [emptyPool, setEmptyPool] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   // Запуск уже идёт: повторный щелчок (двойной клик) игнорируется.
   const starting = useRef(false);
 
@@ -35,7 +33,6 @@ export function StartBar({ preset, onEdit, onDelete, beforeStart }: {
     void Promise.all(checks).then((empties) => live && setEmptyPool(empties.some(Boolean)));
     return () => { live = false; };
   }, [library, tree, keyList, hasEmptySet, session]);
-  useEffect(() => setConfirmDelete(false), [preset?.id]);
 
   const blocked = !library ? 'Сначала выберите папку библиотеки'
     : !preset ? 'Сначала создайте пресет'
@@ -44,11 +41,12 @@ export function StartBar({ preset, onEdit, onDelete, beforeStart }: {
 
   // Одно нажатие: сначала сохраняем открытый редактор, затем берём пресет из базы — с только что выбранными категориями.
   const start = async () => {
-    if (!library || !preset || starting.current) return;
+    if (!library || starting.current) return;
     starting.current = true;
     try {
-      if (!(await beforeStart())) return;
-      const fresh = (await window.sketch.listPresets()).find((p) => p.id === preset.id);
+      const id = await beforeStart();
+      if (id == null) return;
+      const fresh = (await window.sketch.listPresets()).find((p) => p.id === id);
       if (!fresh) return;
       const freshSlots = expandPreset(fresh).filter((s) => s.kind === 'work').map((s) => s.categoryIds);
       if (freshSlots.some((ids) => ids.length === 0)) return setNotice('Выберите категории для пресета или отдельного этапа');
@@ -63,6 +61,21 @@ export function StartBar({ preset, onEdit, onDelete, beforeStart }: {
       starting.current = false;
     }
   };
+  return { blocked, start };
+}
+
+/** Кнопки под циферблатом: правка пресета слева, запуск в центре, удаление справа. */
+export function StartBar({ preset, onEdit, onDelete, beforeStart }: {
+  preset: Preset | null;
+  onEdit: () => void;
+  onDelete: () => Promise<void>;
+  /** Сохраняет открытый редактор; false — сохранить не удалось, старт отменяется. */
+  beforeStart: () => Promise<boolean>;
+}) {
+  const { finishedSummary } = useStore();
+  const { blocked, start } = useStart(preset, async () => (preset && (await beforeStart()) ? preset.id : null));
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  useEffect(() => setConfirmDelete(false), [preset?.id]);
 
   return (
     <section className="start" aria-label="Старт">

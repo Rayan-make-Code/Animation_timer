@@ -245,3 +245,7 @@ button.s-btn:hover:not(:disabled) { color: var(--text); background: transparent;
   .stage-fx { display: none; }
   .s-btn:hover .exit-draw { stroke-dashoffset: 0; }
 }
+
+/* Play в подвале редактора пресета: напротив шестерёнки, в цвете кнопки «Старт». */
+.footer-action { margin-left: auto; display: flex; align-items: center; }
+.footer-action .editor-play { width: 28px; height: 28px; }
