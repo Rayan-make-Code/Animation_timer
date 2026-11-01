@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { LibraryReport } from '../../shared/api';
 import { Icon } from '../components';
 import { errorText, useStore } from '../store';
@@ -15,7 +15,12 @@ const summary = (r: LibraryReport) => {
 };
 
 /** Подвал: шестерёнка; раскрытый подвал показывает панель библиотеки и путь к папке. По умолчанию свёрнут, при первом запуске раскрыт. */
-export function Footer({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+export function Footer({ open, onToggle, action }: {
+  open: boolean;
+  onToggle: () => void;
+  /** Кнопка у правого края, напротив шестерёнки (Play в редакторе пресета). */
+  action?: ReactNode;
+}) {
   const { library, reloadLibrary, reloadPresets, setNotice } = useStore();
   const [busy, setBusy] = useState(false);
 
@@ -66,6 +71,7 @@ export function Footer({ open, onToggle }: { open: boolean; onToggle: () => void
           <Icon name="folder" size={13} />
           <span className="ellipsis">{library ?? 'Папка не выбрана'}</span>
         </button>}
+        {action && <div className="footer-action">{action}</div>}
       </div>
     </footer>
   );

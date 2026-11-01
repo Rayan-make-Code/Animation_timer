@@ -85,7 +85,9 @@ export const PresetEditor = forwardRef<EditorHandle, {
   onSave: (p: NewPreset, id?: number) => Promise<number | null>;
   /** Стрелка «назад»: сохранить и вернуть циферблат. */
   onBack: () => void;
-}>(function PresetEditor({ presetId, initial, tags, onSave, onBack }, ref) {
+  /** Каждое изменение черновика (до сохранения): по нему Play в подвале решает, можно ли стартовать. */
+  onDraft?: (p: NewPreset) => void;
+}>(function PresetEditor({ presetId, initial, tags, onSave, onBack, onDraft }, ref) {
   const [draft, setDraft] = useState<NewPreset>(() => ({ ...initial, categoryIds: initial.categoryIds ?? [], groups: withPrepare(initial.groups) }));
   const [sel, setSel] = useState(0);
   const idRef = useRef(presetId);
@@ -95,6 +97,7 @@ export const PresetEditor = forwardRef<EditorHandle, {
   useEffect(() => {
     if (mounted.current) dirty.current = true;
     mounted.current = true;
+    onDraft?.(draft);
   }, [draft]);
   // Сохранения идут строго по очереди: новый пресет не создаётся дважды.
   const chain = useRef<Promise<boolean>>(Promise.resolve(true));
